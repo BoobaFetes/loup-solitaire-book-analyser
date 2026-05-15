@@ -1,0 +1,34 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: loup-solitaire-book-analyser-job
+spec:
+  template:
+    metadata: {}
+    spec:
+      volumes:
+        - name: project-volume
+          persistentVolumeClaim:
+            claimName: loup-solitaire-book-analyser-pvc
+      containers:
+        - image: loup-solitaire-book-analyser:latest
+          name: loup-solitaire-book-analyser-pod
+          envFrom:
+            - configMapRef:
+                name: loup-solitaire-book-analyser-cm
+                optional: false
+          volumeMounts:
+            - name: project-volume
+              mountPath: /app/data
+              subPath: data
+            - name: project-volume
+              mountPath: /app/logs
+              subPath: logs
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+      restartPolicy: OnFailure

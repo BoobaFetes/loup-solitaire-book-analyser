@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Lancer LoupSolitaire",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "preLaunchTask": "Installer les dépendances",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Debug PowerShell",
+      "type": "PowerShell",
+      "request": "launch",
+      "script": "${file}",
+      "cwd": "${fileDirname}"
+    }
+  ]
+}

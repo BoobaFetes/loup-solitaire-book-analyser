@@ -1,0 +1,40 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: loup-solitaire-book-analyser-dev
+namePrefix: dev-
+
+resources:
+  - ../../base
+
+patches:
+  - target:
+      kind: Namespace
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: loup-solitaire-book-analyser-ns-dev
+  - target:
+      kind: PersistentVolume
+      name: loup-solitaire-book-analyser-pv
+    patch: |-
+      - op: replace
+        path: /spec/claimRef/namespace
+        value: loup-solitaire-book-analyser-dev
+      - op: replace
+        path: /spec/claimRef/name
+        value: dev-loup-solitaire-book-analyser-pvc
+      - op: replace
+        path: /spec/hostPath/path
+        value: /mnt/volumes/loup-solitaire-book-analyser/dev
+      - op: replace
+        path: /spec/storageClassName
+        value: dev-loup-solitaire-book-analyser-sc
+
+  - target:
+      kind: PersistentVolumeClaim
+      name: loup-solitaire-book-analyser-pvc
+    patch: |-
+      - op: replace
+        path: /spec/storageClassName
+        value: dev-loup-solitaire-book-analyser-sc
