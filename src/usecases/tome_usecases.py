@@ -91,7 +91,7 @@ class TomeUseCases:
                 )
                 exceptions.append(e)
                 continue
-        if len(exceptions) > 0:
+        if exceptions:
             raise ValueError(
                 f"Errors occurred during parsing: {len(exceptions)} errors. See logs for details."
             )

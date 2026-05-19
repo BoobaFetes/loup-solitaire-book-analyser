@@ -42,8 +42,10 @@ class ListOfBooksUseCases:
         )
 
         # load each book from html
-        for anchor in anchors:
-            url = self.__options.base_url + anchor["href"].replace("../", "")
-            contents.append(self.__html_reader.load(url))
-
+        contents = [
+            self.__html_reader.load(
+                self.__options.base_url + anchor["href"].replace("../", "")
+            )
+            for anchor in anchors
+        ]
         return contents
