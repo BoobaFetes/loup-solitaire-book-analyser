@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from gateways import (
     FileSystemAdapter,
@@ -8,14 +9,21 @@ from gateways import (
 )
 from usecases import ListOfBooksUseCases, TomeUseCases
 
+SCRIPT_ROOT_DIR = Path(__file__).parent
+
 # arrange
 env = {
     "CONNECTION_STRING": os.getenv("CONNECTION_STRING", None),
-    "FILE_SYSTEM_PATH": os.getenv("FILE_SYSTEM_PATH", None),
     "ENV": os.getenv("ENV", "dev"),
     "LOG_FILE": os.getenv("LOG_FILE", "logs/app.log"),
     "LOG_LEVEL": os.getenv("LOG_LEVEL", "INFO"),
 }
+env["FILE_SYSTEM_PATH"] = os.getenv(
+    "FILE_SYSTEM_PATH",
+    str(SCRIPT_ROOT_DIR / "data")
+    if env["ENV"] != "dev"
+    else str(SCRIPT_ROOT_DIR.parent / "data"),
+)
 
 logger = LoggerAdapter(log_file=env["LOG_FILE"], log_level=env["LOG_LEVEL"])
 logger.info(
