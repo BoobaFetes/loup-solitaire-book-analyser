@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from gateways import (
     FileSystemAdapter,
     HTMLReaderAdapter,
@@ -12,11 +14,17 @@ from usecases import ListOfBooksUseCases, TomeUseCases
 SCRIPT_ROOT_DIR = Path(__file__).parent
 
 # arrange
+_env = os.getenv("ENV", "dev")
+if _env == "dev":
+    # charge les variables du fichier .env si le fichier est présent sinon récupération depuis les variable d'environnement
+    load_dotenv()
+
+
 env = {
     "CONNECTION_STRING": os.getenv("CONNECTION_STRING", None),
-    "ENV": os.getenv("ENV", "dev"),
-    "LOG_FILE": os.getenv("LOG_FILE", "logs/app.log"),
-    "LOG_LEVEL": os.getenv("LOG_LEVEL", "INFO"),
+    "ENV": _env,
+    "LOG_FILE": os.getenv("LOG_FILE", None),
+    "LOG_LEVEL": os.getenv("LOG_LEVEL", "WARN"),
 }
 env["FILE_SYSTEM_PATH"] = os.getenv(
     "FILE_SYSTEM_PATH",

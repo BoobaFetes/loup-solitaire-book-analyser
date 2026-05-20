@@ -13,10 +13,10 @@ implémentation concrète. On peut remplacer InMemoryTomeRepository par une
 implémentation DB sans modifier le domaine.
 """
 
-from .file_system import FileSystemInterface
-from .html_reader import HTMLReaderInterface
-from .logger import LoggerInterface
-from .tome_repository import TomeRepositoryInterface
+from ports.file_system import FileSystemInterface
+from ports.html_reader import HTMLReaderInterface
+from ports.logger import LoggerInterface
+from ports.tome_repository import TomeRepositoryInterface
 
 __all__ = [
     "TomeRepositoryInterface",

@@ -1,4 +1,4 @@
-from ..domain.entities.tome import Tome
+from domain import Tome
 
 
 def afficher_tome_console(tome: Tome):

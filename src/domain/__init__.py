@@ -1,4 +1,3 @@
-from .entities.tome import Tome
-from .entities.url_content import URLContent
+from domain.entities import Tome, URLContent
 
 __all__ = ["Tome", "URLContent"]
