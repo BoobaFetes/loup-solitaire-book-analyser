@@ -5,10 +5,10 @@
       "name": "Lancer LoupSolitaire",
       "type": "debugpy",
       "request": "launch",
+      "python": "${workspaceFolder}/.venv/Scripts/python.exe",
       "program": "${workspaceFolder}/src/main.py",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "preLaunchTask": "Installer les dépendances",
       "envFile": "${workspaceFolder}/.env"
     },
     {
