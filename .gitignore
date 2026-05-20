@@ -33,6 +33,7 @@ ENV/
 # pytest / coverage
 .pytest_cache/
 .coverage
+/coverage.*
 htmlcov/
 
 # mypy
