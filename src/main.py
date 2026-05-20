@@ -3,7 +3,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from gateways import (
+from adapters import (
     FileSystemAdapter,
     HTMLReaderAdapter,
     LoggerAdapter,
