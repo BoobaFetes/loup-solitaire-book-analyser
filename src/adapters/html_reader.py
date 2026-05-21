@@ -25,10 +25,40 @@ class HTMLReaderAdapter(HTMLReaderInterface):
         httpx_logger = logging.getLogger("httpx")
         httpx_logger.addHandler(HttpxLogHandler(logger))
         httpx_logger.propagate = False  # empêche la propagation au logger root
+        self.__client = httpx.AsyncClient()  # client partagé
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        await self.__client.aclose()  # fermeture garantie
+
+    async def load_async(self, url: str, async_client: httpx.AsyncClient) -> URLContent:
+        try:
+            response = await async_client.get(
+                url
+            )  # utilise le client passé en paramètre
+            response.raise_for_status()
+            return URLContent(url=url, text=response.content.decode("latin-1"))
+        except httpx.HTTPError as e:
+            self.__logger.error(f"HTTP error occurred: {e}", self.__class__.__name__)
+            raise
+        except httpx.RequestError as e:
+            self.__logger.error(f"Request error occurred: {e}", self.__class__.__name__)
+            raise
+        except httpx.HTTPStatusError as e:
+            self.__logger.error(
+                f"HTTP status error occurred: {e}", self.__class__.__name__
+            )
+            raise
+        except Exception as e:
+            self.__logger.error(
+                f"Unexpected error occurred: {e}", self.__class__.__name__
+            )
+            raise
 
     def load(self, url: str) -> URLContent:
         try:
-            # httpx.get fait deja un log de niveau INFO donc pas besoin : self.__logger.info(f"Loading content from URL: {url}")
             response = httpx.get(url)
             response.raise_for_status()
             return URLContent(url=url, text=response.content.decode("latin-1"))

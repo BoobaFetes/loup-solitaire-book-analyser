@@ -6,12 +6,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 import unittest
 from datetime import datetime, timezone
 
-from domain.entities.tome import Tome, TomePrice
+from domain.entities.book import Book, BookPrice
 
 
 class TestTomePrice(unittest.TestCase):
     def test_creation_with_required_fields(self):
-        price = TomePrice(prix=12.5, source="amazon")
+        price = BookPrice(prix=12.5, source="amazon")
         self.assertEqual(price.prix, 12.5)
         self.assertEqual(price.source, "amazon")
         self.assertEqual(price.id, 0)
@@ -19,7 +19,7 @@ class TestTomePrice(unittest.TestCase):
 
     def test_creation_with_all_fields(self):
         dt = datetime(2024, 1, 1, tzinfo=timezone.utc)
-        price = TomePrice(id=1, prix=9.99, source="fnac", date=dt)
+        price = BookPrice(id=1, prix=9.99, source="fnac", date=dt)
         self.assertEqual(price.id, 1)
         self.assertEqual(price.prix, 9.99)
         self.assertEqual(price.source, "fnac")
@@ -32,7 +32,7 @@ class TestTome(unittest.TestCase):
             numero=1, titre="Titre", titre_original="Title", description="Desc"
         )
         defaults.update(kwargs)
-        return Tome(**defaults)
+        return Book(**defaults)
 
     def test_creation_sets_id_from_numero(self):
         tome = self._make_tome(numero=5)
@@ -51,14 +51,14 @@ class TestTome(unittest.TestCase):
         self.assertIsInstance(tome.date, datetime)
 
     def test_with_prices(self):
-        price = TomePrice(prix=10.0, source="amazon")
+        price = BookPrice(prix=10.0, source="amazon")
         tome = self._make_tome(prices=[price])
         self.assertEqual(len(tome.prices), 1)
         self.assertEqual(tome.prices[0].source, "amazon")
 
     def test_required_fields(self):
         with self.assertRaises(Exception):
-            Tome(numero=1)
+            Book(numero=1)
 
 
 if __name__ == "__main__":

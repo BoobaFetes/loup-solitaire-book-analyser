@@ -1,3 +1,3 @@
-from domain.entities import Tome, URLContent
+from domain.entities import Book, BookPrice, URLContent
 
-__all__ = ["Tome", "URLContent"]
+__all__ = ["Book", "BookPrice", "URLContent"]

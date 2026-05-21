@@ -6,12 +6,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 import unittest
 from unittest.mock import MagicMock
 
-from domain import Tome
-from usecases.tome_usecases import TomeUseCases
+from domain import Book
+from usecases.main_usecases import MainUseCases
 
 
 def make_tome(numero=1, prix=0.0):
-    t = Tome(
+    t = Book(
         numero=numero,
         titre=f"Tome {numero}",
         titre_original=f"Title {numero}",
@@ -28,7 +28,7 @@ class TestTomeUseCases(unittest.TestCase):
         self.repo = MagicMock()
         self.logger = MagicMock()
         self.list_of_books_usecases = MagicMock()
-        self.use_cases = TomeUseCases(
+        self.use_cases = MainUseCases(
             repo=self.repo,
             logger=self.logger,
             list_of_book_usecases=self.list_of_books_usecases,

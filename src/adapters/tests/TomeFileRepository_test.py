@@ -7,12 +7,12 @@ import unittest
 from json import dumps as json_dumps
 from unittest.mock import MagicMock
 
-from adapters.tome_file_repository import TomeFileRepository
-from domain import Tome
+from adapters.book_file_repository import BookFileRepository
+from domain import Book
 
 
 def make_tome(numero=1):
-    return Tome(
+    return Book(
         numero=numero,
         titre=f"Tome {numero}",
         titre_original=f"Title {numero}",
@@ -26,17 +26,17 @@ class TestTomeFileRepository(unittest.TestCase):
         self.fs = MagicMock()
         self.fs.is_file_exists.return_value = True
         self.fs.read_file.return_value = "{}"
-        self.repo = TomeFileRepository(
+        self.repo = BookFileRepository(
             logger=self.logger, fs=self.fs, connection_string="tomes.json"
         )
 
-    def _set_data(self, tomes: list[Tome]):
+    def _set_data(self, tomes: list[Book]):
         data = {str(t.numero): t.model_dump(mode="json") for t in tomes}
         self.fs.read_file.return_value = json_dumps(data)
 
     def test_init_creates_file_if_not_exists(self):
         self.fs.is_file_exists.return_value = False
-        TomeFileRepository(
+        BookFileRepository(
             logger=self.logger, fs=self.fs, connection_string="tomes.json"
         )
         self.fs.write_file.assert_called_once_with("tomes.json", "{}")

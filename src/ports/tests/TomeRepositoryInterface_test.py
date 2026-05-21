@@ -5,12 +5,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 import unittest
 
-from ports.tome_repository import TomeRepositoryInterface
+from ports.book_repository import BookRepositoryInterface
 
 
 class TestTomeRepositoryInterface(unittest.TestCase):
     def setUp(self):
-        self.repo = TomeRepositoryInterface()
+        self.repo = BookRepositoryInterface()
 
     def test_list_raises_not_implemented(self):
         with self.assertRaises(NotImplementedError):
