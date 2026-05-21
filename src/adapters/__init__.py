@@ -1,10 +1,10 @@
+from adapters.book_file_repository import BookFileRepository
 from adapters.file_system import FileSystemAdapter
 from adapters.html_reader import HTMLReaderAdapter
 from adapters.logger import LoggerAdapter
-from adapters.tome_file_repository import TomeFileRepository
 
 __all__ = [
-    "TomeFileRepository",
+    "BookFileRepository",
     "LoggerAdapter",
     "FileSystemAdapter",
     "HTMLReaderAdapter",

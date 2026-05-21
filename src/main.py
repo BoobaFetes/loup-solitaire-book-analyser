@@ -1,15 +1,16 @@
+import asyncio
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 from adapters import (
+    BookFileRepository,
     FileSystemAdapter,
     HTMLReaderAdapter,
     LoggerAdapter,
-    TomeFileRepository,
 )
-from usecases import ListOfBooksUseCases, TomeUseCases
+from usecases import BookUseCases, MainUseCases
 
 SCRIPT_ROOT_DIR = Path(__file__).parent
 
@@ -37,9 +38,7 @@ logger = LoggerAdapter(log_file=env["LOG_FILE"], log_level=env["LOG_LEVEL"])
 logger.info(
     f"--------------------  Starting application [{__file__}]   ------------------"
 )
-logger.debug(
-    "--------------------          initialization              ------------------"
-)
+
 logger.debug("environment variables:")
 for key, value in env.items():
     logger.debug(f"  {key} = {value}", "INIT")
@@ -56,7 +55,7 @@ adapters["html_reader"] = HTMLReaderAdapter(logger=adapters["logger"])
 logger.debug("adapters finalized", "INIT")
 
 repositories = {}
-repositories["tome"] = TomeFileRepository(
+repositories["tome"] = BookFileRepository(
     logger=adapters["logger"],
     fs=adapters["fs"],
     connection_string=env["CONNECTION_STRING"],
@@ -64,21 +63,33 @@ repositories["tome"] = TomeFileRepository(
 logger.debug("repositories finalized", "INIT")
 
 # arrange
-list_of_books_usecases = ListOfBooksUseCases(
-    html_reader=adapters["html_reader"], fs=adapters["fs"], logger=adapters["logger"]
+book_usecases = BookUseCases(
+    html_reader=adapters["html_reader"], logger=adapters["logger"]
 )
-tome_use_cases = TomeUseCases(
-    repositories["tome"], adapters["logger"], list_of_books_usecases
-)
+main_usecases = MainUseCases(book_usecases, repositories["tome"], adapters["logger"])
 logger.debug("usecases finalized", "INIT")
 
-# action
-tomes = tome_use_cases.download_list_of_books_from_url()
 
-if env["ENV"] == "dev":
-    adapters["logger"].info("")
-    for tome in tomes:
-        adapters["logger"].info(
-            f" - {tome.numero}: '{tome.titre}',  Description: {tome.description[:50]}...",
-            "DEV ONLY",
-        )
+# action
+async def main():
+    async with adapters["html_reader"]:
+        tomes = await main_usecases.download_tomes()
+        # si tout va bien jusqu'ici, on va parser pour rechercher les noms et numérris des tomes
+    # ensuite nous ferons une recherche en fonction du site pour obtenir les prix
+
+    # il faudra certainement retirer les prix et les dates
+    # ajouter un sous liste de prix/dates/source=amazon,etc pour chaque tome
+    # pour le moment on fait kiss pour la persistance de données => direct dans un fichier json
+    # pour l'hebergement on pensera donc à un volume pour l'instant sachant qu'il faudra trouver un chart helm pour la base de donnée qui reste à choisir => postgresql, tinydb, etc
+    # raise NotImplementedError("Parsing logic not implemented yet")
+
+    if env["ENV"] == "dev":
+        adapters["logger"].info("")
+        for tome in tomes:
+            adapters["logger"].info(
+                f" - {tome.numero}: '{tome.titre}',  Description: {tome.description[:50]}...",
+                "DEV ONLY",
+            )
+
+
+asyncio.run(main())

@@ -17,11 +17,11 @@ from json import dumps as json_dumps
 from json import loads as json_loads
 from typing import List
 
-from domain import Tome
-from ports import FileSystemInterface, LoggerInterface, TomeRepositoryInterface
+from domain import Book
+from ports import BookRepositoryInterface, FileSystemInterface, LoggerInterface
 
 
-class TomeFileRepository(TomeRepositoryInterface):
+class BookFileRepository(BookRepositoryInterface):
     """Implémentation en mémoire du dépôt de tomes.
 
     Utile pour :
@@ -43,12 +43,12 @@ class TomeFileRepository(TomeRepositoryInterface):
             self.__fs.write_file(self.__connection_string, "{}")
 
     # region gestion des fichiers : extraction et persistance
-    def __extract(self) -> dict[str, Tome]:
+    def __extract(self) -> dict[str, Book]:
         content = self.__fs.read_file(self.__connection_string, withLog=False)
         data: dict[str, dict] = json_loads(content)
-        return {key: Tome(**item) for key, item in data.items()}
+        return {key: Book(**item) for key, item in data.items()}
 
-    def __persist(self, tomes: dict[str, Tome]):
+    def __persist(self, tomes: dict[str, Book]):
         data = {key: tome.model_dump(mode="json") for key, tome in tomes.items()}
         self.__fs.write_file(
             self.__connection_string, json_dumps(data, indent=2), withLog=False
@@ -56,9 +56,9 @@ class TomeFileRepository(TomeRepositoryInterface):
 
     # endregion
 
-    def list(self) -> List[Tome]:
+    def list(self) -> List[Book]:
         try:
-            data: dict[str, Tome] = self.__extract()
+            data: dict[str, Book] = self.__extract()
             self.__logger.info(
                 f"Listed {len(data)} tomes from file system at {self.__connection_string}",
                 self.__class__.__name__,
@@ -68,9 +68,9 @@ class TomeFileRepository(TomeRepositoryInterface):
             self.__logger.error(f"Error listing tomes: {e}", self.__class__.__name__)
         return []
 
-    def add_many(self, tomes: List[Tome]) -> int:
+    def add_many(self, tomes: List[Book]) -> int:
         try:
-            data: dict[str, Tome] = self.__extract()
+            data: dict[str, Book] = self.__extract()
             for tome in tomes:
                 data[str(tome.numero)] = tome
 
@@ -85,9 +85,9 @@ class TomeFileRepository(TomeRepositoryInterface):
 
         return 0
 
-    def add(self, tome: Tome) -> bool:
+    def add(self, tome: Book) -> bool:
         try:
-            data: dict[str, Tome] = self.__extract()
+            data: dict[str, Book] = self.__extract()
             data[str(tome.numero)] = tome
             self.__persist(data)
             self.__logger.info(
@@ -101,15 +101,15 @@ class TomeFileRepository(TomeRepositoryInterface):
             )
         return False
 
-    def get(self, numero: int) -> Tome:
+    def get(self, numero: int) -> Book:
         data = self.find(numero)
         if not data:
             raise ValueError(f"Tome with numero {numero} not found.")
         return data
 
-    def find(self, numero: int) -> Tome | None:
+    def find(self, numero: int) -> Book | None:
         try:
-            data: dict[str, Tome] = self.__extract()
+            data: dict[str, Book] = self.__extract()
             item = data.get(str(numero), None)
             if item is not None:
                 self.__logger.info(
@@ -128,9 +128,9 @@ class TomeFileRepository(TomeRepositoryInterface):
             )
         return None
 
-    def update(self, tome: Tome) -> bool:
+    def update(self, tome: Book) -> bool:
         try:
-            data: dict[str, Tome] = self.__extract()
+            data: dict[str, Book] = self.__extract()
             if str(tome.numero) in data:
                 data[str(tome.numero)] = tome
                 self.__persist(data)
@@ -152,7 +152,7 @@ class TomeFileRepository(TomeRepositoryInterface):
 
     def delete(self, numero: int) -> bool:
         try:
-            data: dict[str, Tome] = self.__extract()
+            data: dict[str, Book] = self.__extract()
             if str(numero) in data:
                 del data[str(numero)]
                 self.__persist(data)
