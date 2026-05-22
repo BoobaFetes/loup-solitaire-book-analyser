@@ -12,6 +12,8 @@ from usecases import BookUseCases
 
 
 class MainUseCases:
+    """Main use cases for the application."""
+
     Url_of_list_of_books: str = (
         "https://www.bibliotheque-des-aventuriers.com/menu/4_serie/loup_solitaire.htm"
     )
@@ -27,23 +29,28 @@ class MainUseCases:
         self.__logger: LoggerInterface = logger
 
     async def download_tomes(self) -> list[Book]:
+        """Downloads all tomes from the source.
+
+        Raises:
+            ValueError: If the book data is invalid or if the book repository is not found.
+
+        Returns:
+            list[Book]: A list of downloaded books.
+        """
         # arrange
         exceptions: list[Exception] = []
-        tomes = []
+        tomes: list[Book] = []
+        self.__logger.info("downloading tomes asynchronously", self.__class__.__name__)
 
         # find urls then load each book's data
-        urls = await self.__book_usecases.find_urls()
-        self.__logger.info(
-            "Finding data for each book from html contents", self.__class__.__name__
-        )
-
         async with httpx.AsyncClient() as async_client:
+            urls = await self.__book_usecases.find_urls_async(async_client)
             tasks = [self.__book_usecases.load_async(url, async_client) for url in urls]
             for tome in await asyncio.gather(*tasks, return_exceptions=True):
-                if isinstance(tome, Exception):
-                    exceptions.append(tome)
-                else:
+                if isinstance(tome, Book):
                     tomes.append(tome)
+                else:
+                    exceptions.append(tome)  # type: ignore
 
         if exceptions:
             raise ValueError(
@@ -65,6 +72,8 @@ class MainUseCases:
             "Calculating total and average prices", self.__class__.__name__
         )
         tomes = self.__repo.list()
-        total = sum(t.prix for t in tomes)
+        total = 0.0
+        for book in tomes:
+            total += sum([price.prix for price in book.prices])
         average = total / len(tomes) if tomes else 0.0
         return total, average

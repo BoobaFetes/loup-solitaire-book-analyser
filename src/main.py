@@ -21,10 +21,10 @@ if _env == "dev":
     load_dotenv()
 
 
-env = {
-    "CONNECTION_STRING": os.getenv("CONNECTION_STRING", None),
+env: dict[str, str] = {
+    "CONNECTION_STRING": os.getenv("CONNECTION_STRING", ""),
     "ENV": _env,
-    "LOG_FILE": os.getenv("LOG_FILE", None),
+    "LOG_FILE": os.getenv("LOG_FILE", ""),
     "LOG_LEVEL": os.getenv("LOG_LEVEL", "WARN"),
 }
 env["FILE_SYSTEM_PATH"] = os.getenv(
@@ -46,35 +46,28 @@ for key, value in env.items():
 # IOC simulation
 # on instancie les adaptateurs (implémentations concrètes) et on les injecte dans les usecases.
 # Les usecases ne connaissent que les interfaces (abstractions) et restent découplés des implémentations concrètes.
-adapters = {}
-adapters["logger"] = logger
-adapters["fs"] = FileSystemAdapter(
-    logger=adapters["logger"], path=env["FILE_SYSTEM_PATH"]
-)
-adapters["html_reader"] = HTMLReaderAdapter(logger=adapters["logger"])
+fs = FileSystemAdapter(logger, path=env["FILE_SYSTEM_PATH"])
+html_reader = HTMLReaderAdapter(logger=logger)
 logger.debug("adapters finalized", "INIT")
 
 repositories = {}
 repositories["tome"] = BookFileRepository(
-    logger=adapters["logger"],
-    fs=adapters["fs"],
+    logger,
+    fs,
     connection_string=env["CONNECTION_STRING"],
 )
 logger.debug("repositories finalized", "INIT")
 
 # arrange
-book_usecases = BookUseCases(
-    html_reader=adapters["html_reader"], logger=adapters["logger"]
-)
-main_usecases = MainUseCases(book_usecases, repositories["tome"], adapters["logger"])
+book_usecases = BookUseCases(html_reader, logger)
+main_usecases = MainUseCases(book_usecases, repositories["tome"], logger)
 logger.debug("usecases finalized", "INIT")
 
 
 # action
 async def main():
-    async with adapters["html_reader"]:
-        tomes = await main_usecases.download_tomes()
-        # si tout va bien jusqu'ici, on va parser pour rechercher les noms et numérris des tomes
+    tomes = await main_usecases.download_tomes()
+    # si tout va bien jusqu'ici, on va parser pour rechercher les noms et numérris des tomes
     # ensuite nous ferons une recherche en fonction du site pour obtenir les prix
 
     # il faudra certainement retirer les prix et les dates
@@ -84,9 +77,9 @@ async def main():
     # raise NotImplementedError("Parsing logic not implemented yet")
 
     if env["ENV"] == "dev":
-        adapters["logger"].info("")
+        logger.info("")
         for tome in tomes:
-            adapters["logger"].info(
+            logger.info(
                 f" - {tome.numero}: '{tome.titre}',  Description: {tome.description[:50]}...",
                 "DEV ONLY",
             )

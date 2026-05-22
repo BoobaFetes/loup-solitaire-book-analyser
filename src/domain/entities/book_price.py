@@ -4,6 +4,12 @@ from pydantic import BaseModel, Field
 
 
 class BookPrice(BaseModel):
+    """Represents the price of a book.
+
+    Args:
+        BaseModel: The base model class from Pydantic.
+    """
+
     id: int = Field(default=0)
     date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     prix: float

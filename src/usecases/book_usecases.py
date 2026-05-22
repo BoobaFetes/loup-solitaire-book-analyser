@@ -9,6 +9,8 @@ from ports import HTMLReaderInterface, LoggerInterface
 
 
 class BooksUseCasesOptions:
+    """Options for the book use cases."""
+
     def __init__(
         self,
         base_url: str | None = None,
@@ -19,6 +21,8 @@ class BooksUseCasesOptions:
 
 
 class BookUseCases:
+    """Use cases for managing books."""
+
     def __init__(
         self,
         html_reader: HTMLReaderInterface,
@@ -29,31 +33,22 @@ class BookUseCases:
         self.__logger = logger
         self.__options = options
 
-    # region CRUD
-
-    def update(self, tome: Book) -> bool:
-        return self.__repo.update(tome)
-
-    def get(self, numero: int) -> Book:
-        return self.__repo.get(numero)
-
-    def find(self, numero: int) -> Book | None:
-        return self.__repo.find(numero)
-
-    def list(self) -> list[Book]:
-        return self.__repo.list()
-
-    # endregion
-
     # region logic
 
-    async def find_urls(self) -> list[str]:
+    async def find_urls_async(self, async_client: httpx.AsyncClient) -> list[str]:
+        """Finds all book URLs from the main page.
+
+        Returns:
+            list[str]: A list of book URLs.
+        """
         # arrange
         selector = "body > table > tr > td:nth-child(1) > table:nth-child(2) > tr > td:nth-child(2) > table > tr > td > p:nth-child(9) a"
 
         # load list of books from html
         self.__logger.info("Loading list of books from html", self.__class__.__name__)
-        html_list_of_books = self.__html_reader.load(self.__options.url).text
+        html_list_of_books = (
+            await self.__html_reader.load_async(self.__options.url, async_client)
+        ).text
 
         # find then select all book's names from the list
         soup = BeautifulSoup(html_list_of_books, "html.parser")
@@ -63,11 +58,23 @@ class BookUseCases:
         )
 
         return [
-            self.__options.base_url + anchor["href"].replace("../", "")
+            self.__options.base_url + str(anchor["href"]).replace("../", "")
             for anchor in anchors
         ]
 
     async def load_async(self, url: str, async_client: httpx.AsyncClient) -> Book:
+        """Loads a book asynchronously from a URL.
+
+        Args:
+            url (str): The URL of the book.
+            async_client (httpx.AsyncClient): The HTTP client to use for the request.
+
+        Raises:
+            e: _description_
+
+        Returns:
+            Book: _description_
+        """
         try:
             content: URLContent = await self.__html_reader.load_async(url, async_client)
 
@@ -75,7 +82,7 @@ class BookUseCases:
             numero = int(Path(content.url).name.split("_", 1)[0])
             titre_from_html = soup.select_one(
                 "table#AutoNumber1 p:nth-child(1)"
-            ).get_text(strip=True)
+            ).get_text(strip=True)  # type: ignore
             titre = re.sub(
                 r"\(.*\)|Voir.*$", "", titre_from_html, flags=re.DOTALL
             )  # retire les parenthèses et le texte "Voir..." qui suit, présent dans les titres du premier tome qui a 2 versions: "classique" et "augmentée"
@@ -83,11 +90,11 @@ class BookUseCases:
 
             titre_original: str = soup.select_one(
                 "table#AutoNumber2 tr:nth-child(2) td:nth-child(2) i"
-            ).get_text(strip=True)
+            ).get_text(strip=True)  # type: ignore
 
             description: str = soup.select_one(
                 "table#AutoNumber2 tr:nth-child(3) td p:nth-child(5)"
-            ).get_text(strip=True)
+            ).get_text(strip=True)  # type: ignore
             description = re.sub(r"\s+", " ", description).strip()
 
             self.__logger.debug(

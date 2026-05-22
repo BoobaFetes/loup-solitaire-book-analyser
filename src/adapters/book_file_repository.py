@@ -15,19 +15,21 @@ implémentation DB sans modifier le domaine.
 
 from json import dumps as json_dumps
 from json import loads as json_loads
-from typing import List
+from typing import Any, List
 
 from domain import Book
 from ports import BookRepositoryInterface, FileSystemInterface, LoggerInterface
 
 
 class BookFileRepository(BookRepositoryInterface):
-    """Implémentation en mémoire du dépôt de tomes.
+    """Implémentation d'un dépôt de tomes basé sur le système de fichiers.
 
     Utile pour :
-    - tests unitaires rapides,
-    - prototypes sans persistance,
-    - ou comme stub en développement.
+        - tests unitaires rapides,
+        - prototypes sans persistance,
+        - ou comme stub en développement.
+    Args:
+        BookRepositoryInterface (BookRepositoryInterface): Interface du dépôt de tomes.
     """
 
     def __init__(
@@ -44,11 +46,21 @@ class BookFileRepository(BookRepositoryInterface):
 
     # region gestion des fichiers : extraction et persistance
     def __extract(self) -> dict[str, Book]:
+        """Extrait les données des tomes depuis le système de fichiers.
+
+        Returns:
+            dict[str, Book]: Un dictionnaire de tomes extraits.
+        """
         content = self.__fs.read_file(self.__connection_string, withLog=False)
-        data: dict[str, dict] = json_loads(content)
+        data: dict[str, Any] = json_loads(content)
         return {key: Book(**item) for key, item in data.items()}
 
     def __persist(self, tomes: dict[str, Book]):
+        """Persiste les données des tomes dans le système de fichiers.
+
+        Args:
+            tomes (dict[str, Book]): Un dictionnaire de tomes à persister.
+        """
         data = {key: tome.model_dump(mode="json") for key, tome in tomes.items()}
         self.__fs.write_file(
             self.__connection_string, json_dumps(data, indent=2), withLog=False
@@ -57,6 +69,11 @@ class BookFileRepository(BookRepositoryInterface):
     # endregion
 
     def list(self) -> List[Book]:
+        """Liste tous les tomes.
+
+        Returns:
+            List[Book]: Une liste de tous les tomes.
+        """
         try:
             data: dict[str, Book] = self.__extract()
             self.__logger.info(
@@ -69,6 +86,14 @@ class BookFileRepository(BookRepositoryInterface):
         return []
 
     def add_many(self, tomes: List[Book]) -> int:
+        """Ajoute plusieurs tomes au dépôt.
+
+        Args:
+            tomes (List[Book]): La liste des tomes à ajouter.
+
+        Returns:
+            int: Le nombre de tomes ajoutés.
+        """
         try:
             data: dict[str, Book] = self.__extract()
             for tome in tomes:
@@ -86,6 +111,14 @@ class BookFileRepository(BookRepositoryInterface):
         return 0
 
     def add(self, tome: Book) -> bool:
+        """Ajoute un tome au dépôt.
+
+        Args:
+            tome (Book): Le tome à ajouter.
+
+        Returns:
+            bool: True si le tome a été ajouté avec succès, False sinon.
+        """
         try:
             data: dict[str, Book] = self.__extract()
             data[str(tome.numero)] = tome
@@ -102,12 +135,31 @@ class BookFileRepository(BookRepositoryInterface):
         return False
 
     def get(self, numero: int) -> Book:
+        """Récupère un tome par son numéro.
+
+        Args:
+            numero (int): Le numéro du tome à récupérer.
+
+        Raises:
+            ValueError: Si le tome n'est pas trouvé.
+
+        Returns:
+            Book: Le tome correspondant au numéro.
+        """
         data = self.find(numero)
         if not data:
             raise ValueError(f"Tome with numero {numero} not found.")
         return data
 
     def find(self, numero: int) -> Book | None:
+        """Récupère un tome par son numéro.
+
+        Args:
+            numero (int): Le numéro du tome à récupérer.
+
+        Returns:
+            Book | None: Le tome correspondant au numéro ou None s'il n'est pas trouvé.
+        """
         try:
             data: dict[str, Book] = self.__extract()
             item = data.get(str(numero), None)
@@ -129,6 +181,14 @@ class BookFileRepository(BookRepositoryInterface):
         return None
 
     def update(self, tome: Book) -> bool:
+        """Met à jour un tome dans le dépôt.
+
+        Args:
+            tome (Book): Le tome à mettre à jour.
+
+        Returns:
+            bool: True si le tome a été mis à jour avec succès, False sinon.
+        """
         try:
             data: dict[str, Book] = self.__extract()
             if str(tome.numero) in data:
@@ -151,6 +211,14 @@ class BookFileRepository(BookRepositoryInterface):
         return False
 
     def delete(self, numero: int) -> bool:
+        """Supprime un tome du dépôt.
+
+        Args:
+            numero (int): Le numéro du tome à supprimer.
+
+        Returns:
+            bool: True si le tome a été supprimé avec succès, False sinon.
+        """
         try:
             data: dict[str, Book] = self.__extract()
             if str(numero) in data:

@@ -26,21 +26,51 @@ class LoggerAdapter(LoggerInterface):
         )
         self.__logger = logging.getLogger(__name__)
 
-    def debug(self, message: str, layer: str = None):
+    def debug(self, message: str, layer: str | None = None):
+        """Log a debug message.
+
+        Args:
+            message (str): The message to log.
+            layer (str | None, optional): The layer from which the log is emitted. Defaults to None.
+        """
         self.__log_with_level("DEBUG", message, layer)
 
-    def info(self, message: str, layer: str = None):
+    def info(self, message: str, layer: str | None = None):
+        """Log an info message.
+
+        Args:
+            message (str): The message to log.
+            layer (str | None, optional): The layer from which the log is emitted. Defaults to None.
+        """
         self.__log_with_level("INFO", message, layer)
 
-    def warning(self, message: str, layer: str = None):
+    def warning(self, message: str, layer: str | None = None):
+        """Log a warning message.
+
+        Args:
+            message (str): The message to log.
+            layer (str | None, optional): The layer from which the log is emitted. Defaults to None.
+        """
         self.__log_with_level("WARNING", message, layer)
 
-    def error(self, message: str, layer: str = None):
+    def error(self, message: str, layer: str | None = None):
+        """Log an error message.
+
+        Args:
+            message (str): The message to log.
+            layer (str | None, optional): The layer from which the log is emitted. Defaults to None.
+        """
         self.__log_with_level("ERROR", message, layer)
 
-    def critical(self, message: str, layer: str = None):
+    def critical(self, message: str, layer: str | None = None):
+        """Log a critical message.
+
+        Args:
+            message (str): The message to log.
+            layer (str | None, optional): The layer from which the log is emitted. Defaults to None.
+        """
         self.__log_with_level("CRITICAL", message, layer)
 
-    def __log_with_level(self, level: str, message: str, layer: str = None):
+    def __log_with_level(self, level: str, message: str, layer: str | None = None):
         msg = f"[{layer}] {message}" if layer else message
         self.__logger.log(getattr(logging, level), msg)
