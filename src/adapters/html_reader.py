@@ -50,18 +50,18 @@ class HTMLReaderAdapter(HTMLReaderInterface):
             response.raise_for_status()
             return URLContent(url=url, text=response.content.decode("latin-1"))
         except httpx.RequestError as e:
-            self.__logger.error(f"Request error occurred: {e}", self.__class__.__name__)
+            self.__logger.critical(f"Request error occurred: {e}", self.__class__.__name__)
             raise
         except httpx.HTTPStatusError as e:
-            self.__logger.error(
+            self.__logger.critical(
                 f"HTTP status error occurred: {e}", self.__class__.__name__
             )
             raise
         except httpx.HTTPError as e:
-            self.__logger.error(f"HTTP error occurred: {e}", self.__class__.__name__)
+            self.__logger.critical(f"HTTP error occurred: {e}", self.__class__.__name__)
             raise
         except Exception as e:
-            self.__logger.error(
+            self.__logger.critical(
                 f"Unexpected error occurred: {e}", self.__class__.__name__
             )
             raise
@@ -80,18 +80,18 @@ class HTMLReaderAdapter(HTMLReaderInterface):
             response.raise_for_status()
             return URLContent(url=url, text=response.content.decode("latin-1"))
         except httpx.RequestError as e:
-            self.__logger.error(f"Request error occurred: {e}", self.__class__.__name__)
+            self.__logger.critical(f"Request error occurred: {e}", self.__class__.__name__)
             raise
         except httpx.HTTPStatusError as e:
-            self.__logger.error(
+            self.__logger.critical(
                 f"HTTP status error occurred: {e}", self.__class__.__name__
             )
             raise
         except httpx.HTTPError as e:
-            self.__logger.error(f"HTTP error occurred: {e}", self.__class__.__name__)
+            self.__logger.critical(f"HTTP error occurred: {e}", self.__class__.__name__)
             raise
         except Exception as e:
-            self.__logger.error(
+            self.__logger.critical(
                 f"Unexpected error occurred: {e}", self.__class__.__name__
             )
             raise

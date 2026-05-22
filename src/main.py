@@ -35,8 +35,8 @@ env["FILE_SYSTEM_PATH"] = os.getenv(
 )
 
 logger = LoggerAdapter(log_file=env["LOG_FILE"], log_level=env["LOG_LEVEL"])
-logger.info(
-    f"--------------------  Starting application [{__file__}]   ------------------"
+logger.debug(
+    f"--------------------  application [{__file__}] starts   ------------------"
 )
 
 logger.debug("environment variables:")
@@ -86,3 +86,6 @@ async def main():
 
 
 asyncio.run(main())
+logger.debug(
+    f"--------------------  application [{__file__}] ends   ------------------"
+)

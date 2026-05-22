@@ -45,7 +45,7 @@ class FileSystemAdapter(FileSystemInterface):
                     self.__class__.__name__,
                 )
         except Exception as e:
-            self.__logger.error(
+            self.__logger.critical(
                 f"Error clearing directory {self.__path}: {e}", self.__class__.__name__
             )
             raise
@@ -83,13 +83,13 @@ class FileSystemAdapter(FileSystemInterface):
                 content = f.read()
             return content
         except FileNotFoundError as e:
-            self.__logger.error(
+            self.__logger.critical(
                 f"File not found: {Path(self.__path / name)}: {e}",
                 self.__class__.__name__,
             )
             raise
         except IOError as e:
-            self.__logger.error(
+            self.__logger.critical(
                 f"Error reading file {Path(self.__path / name)}: {e}",
                 self.__class__.__name__,
             )
@@ -132,7 +132,7 @@ class FileSystemAdapter(FileSystemInterface):
             with open(current_path, "w", encoding="utf-8") as f:
                 f.write(content)
         except FileNotFoundError as e:
-            self.__logger.error(
+            self.__logger.critical(
                 f"File not found: {current_path}: {e}", self.__class__.__name__
             )
             raise
@@ -142,7 +142,7 @@ class FileSystemAdapter(FileSystemInterface):
             )
             raise
         except Exception as e:
-            self.__logger.error(
+            self.__logger.critical(
                 f"Error saving file {current_path}: {e}", self.__class__.__name__
             )
             raise

@@ -107,7 +107,7 @@ class BookUseCases:
                 description=description,
             )
         except Exception as e:
-            self.__logger.error(
+            self.__logger.critical(
                 f"Error loading book from url {url}: {e}", self.__class__.__name__
             )
             raise e

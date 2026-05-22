@@ -53,7 +53,13 @@ class BookFileRepository(BookRepositoryInterface):
         """
         content = self.__fs.read_file(self.__connection_string, withLog=False)
         data: dict[str, Any] = json_loads(content)
-        return {key: Book(**item) for key, item in data.items()}
+
+        results = {key: Book(**item) for key, item in data.items()}
+        self.__logger.debug(
+            f"Extracted tomes from file system at {self.__connection_string} : {len(results) + 1} items",
+            self.__class__.__name__,
+        )
+        return results
 
     def __persist(self, tomes: dict[str, Book]):
         """Persiste les données des tomes dans le système de fichiers.
@@ -64,6 +70,10 @@ class BookFileRepository(BookRepositoryInterface):
         data = {key: tome.model_dump(mode="json") for key, tome in tomes.items()}
         self.__fs.write_file(
             self.__connection_string, json_dumps(data, indent=2), withLog=False
+        )
+        self.__logger.debug(
+            f"Persisted tomes to file system at {self.__connection_string} : {len(tomes) + 1} items",
+            self.__class__.__name__,
         )
 
     # endregion
@@ -200,7 +210,7 @@ class BookFileRepository(BookRepositoryInterface):
                 )
                 return True
             else:
-                self.__logger.info(
+                self.__logger.warning(
                     f"Tome {tome.numero} not found in file system at {self.__connection_string}",
                     self.__class__.__name__,
                 )
@@ -230,7 +240,7 @@ class BookFileRepository(BookRepositoryInterface):
                 )
                 return True
             else:
-                self.__logger.info(
+                self.__logger.warning(
                     f"Tome {numero} not found in file system at {self.__connection_string}",
                     self.__class__.__name__,
                 )
