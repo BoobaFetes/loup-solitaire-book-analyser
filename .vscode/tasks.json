@@ -1,0 +1,20 @@
+{
+  // Fichier tasks.json pour VS Code
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "check typings",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/pyright.exe",
+      "args": ["${workspaceFolder}/src/main.py"],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

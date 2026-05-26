@@ -8,6 +8,7 @@
       "python": "${workspaceFolder}/.venv/Scripts/python.exe",
       "program": "${workspaceFolder}/src/main.py",
       "console": "integratedTerminal",
+      "preLaunchTask": "check typings",
       "justMyCode": true,
       "envFile": "${workspaceFolder}/.env"
     },
