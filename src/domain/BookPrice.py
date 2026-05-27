@@ -14,3 +14,5 @@ class BookPrice(BaseModel):
     date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     prix: float
     source: str
+    url: str
+    currency: str

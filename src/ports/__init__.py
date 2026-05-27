@@ -1,11 +1,11 @@
-from ports.book_repository import BookRepositoryInterface
-from ports.file_system import FileSystemInterface
-from ports.html_reader import HTMLReaderInterface
-from ports.logger import LoggerInterface
+from ports.BookRepositoryInterface import BookRepositoryInterface
+from ports.FetcherInterface import FetcherInterface
+from ports.FileSystemInterface import FileSystemInterface
+from ports.LoggerInterface import LoggerInterface
 
 __all__ = [
     "BookRepositoryInterface",
     "LoggerInterface",
     "FileSystemInterface",
-    "HTMLReaderInterface",
+    "FetcherInterface",
 ]

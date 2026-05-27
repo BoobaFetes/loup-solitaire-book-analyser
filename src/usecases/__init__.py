@@ -1,4 +1,3 @@
-from usecases.book_usecases import BookUseCases
-from usecases.main_usecases import MainUseCases
+from usecases.BookUseCases import BookUseCases
 
-__all__ = ["MainUseCases", "BookUseCases"]
+__all__ = ["BookUseCases"]
