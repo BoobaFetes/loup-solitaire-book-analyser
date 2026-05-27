@@ -11,7 +11,7 @@ spec:
           persistentVolumeClaim:
             claimName: loup-solitaire-book-analyser-pvc
       containers:
-        - image: loup-solitaire-book-analyser:latest
+        - image: loup-solitaire-book-analyser:v1.0.4
           name: loup-solitaire-book-analyser-pod
           envFrom:
             - configMapRef:
