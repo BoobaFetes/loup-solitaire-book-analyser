@@ -16,6 +16,7 @@ class Book(BaseModel):
     numero: int
     titre: str
     authors: list[str] = Field(default_factory=lambda: [])
+    image: str
     description: str
     official: bool
     prices: list[BookPrice] = Field(default_factory=lambda: [])

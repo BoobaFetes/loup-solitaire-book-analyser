@@ -117,6 +117,7 @@ class OfficialBookUseCases(BookUseCasesInterface):
                 titre=self._get_title(soup, ""),
                 description=self._get_description(soup, ""),
                 isbn=self._get_isbn(soup, ""),
+                image=self._get_image(soup, ""),
                 prices=self._get_prices(soup, url, []),
                 official=True,
             )
@@ -198,6 +199,9 @@ class OfficialBookUseCases(BookUseCasesInterface):
 
         element = soup.select_one("div.Book-resume")
         return element.get_text(strip=True) if element else default_value
+
+    def _get_image(self, soup: BeautifulSoup, default_value: str = "") -> str:
+        return ""
 
     def _get_prices(
         self, soup: BeautifulSoup, url: str, default_value: list[BookPrice] = []
