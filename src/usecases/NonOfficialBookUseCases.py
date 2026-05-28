@@ -115,6 +115,7 @@ class NonOfficialBookUseCases(BookUseCasesInterface):
                 titre=self._get_title(soup, ""),
                 description=self._get_description(soup, ""),
                 isbn=self._get_isbn(soup, ""),
+                image=self._get_image(soup, ""),
                 prices=[],
                 official=False,
             )
@@ -156,14 +157,6 @@ class NonOfficialBookUseCases(BookUseCasesInterface):
 
         options["id"] -= 1
         return options["id"]
-
-    def _is_classic_version(self, soup: BeautifulSoup) -> bool:
-        element = soup.select_one("table#AutoNumber1 p:nth-child(1)")
-        if not element:
-            return False
-
-        titre = element.get_text(strip=True)
-        return "classique)" in titre.lower()
 
     def _get_title(self, soup: BeautifulSoup, default_value: str) -> str:
         element = soup.select_one("table#AutoNumber1 p:nth-child(1)")
@@ -209,6 +202,17 @@ class NonOfficialBookUseCases(BookUseCasesInterface):
         description = element.get_text(strip=True)  # type: ignore
         description = re.sub(r"\s+", " ", description).strip()
         return description
+
+    def _get_image(self, soup: BeautifulSoup, default_value: str = "") -> str:
+        return ""
+
+    def _is_classic_version(self, soup: BeautifulSoup) -> bool:
+        element = soup.select_one("table#AutoNumber1 p:nth-child(1)")
+        if not element:
+            return False
+
+        titre = element.get_text(strip=True)
+        return "classique)" in titre.lower()
 
     # endregion
 
