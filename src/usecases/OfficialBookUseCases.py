@@ -2,7 +2,6 @@ import asyncio
 import base64
 from typing import Literal, cast
 
-import httpx
 from bs4 import BeautifulSoup, Tag
 
 from domain import Book, BookPrice
@@ -17,9 +16,6 @@ class OfficialBookUseCases(BookUseCasesInterface):
 
     async def fetch_books(self, fetcher: FetcherInterface) -> list[Book]:
         results: list[Book] = []
-        # attention, le site de gallimard est plutôt rapide mais parfois, le soir surtout, il peut être un peu instable et il vaut mieux prévoir plusieurs tentatives pour éviter les erreurs de timeout ou de connexion
-        # à voir s'il faudra rajouter du delai entre deux tentatives pour éviter de surcharger le site et d'augmenter les chances de succès
-        book_details_attempts = 3
 
         async with fetcher as fetcher:
             self._logger.info(
@@ -30,9 +26,7 @@ class OfficialBookUseCases(BookUseCasesInterface):
             self._logger.info(
                 f"Fetching book details for {len(urls)} URLs", self.__class__.__name__
             )
-            tasks = [
-                self.fetch_book(url, fetcher, book_details_attempts) for url in urls
-            ]
+            tasks = [self.fetch_book(url, fetcher) for url in urls]
             results = [book for book in await asyncio.gather(*tasks) if book]
         return results
 
@@ -86,14 +80,12 @@ class OfficialBookUseCases(BookUseCasesInterface):
 
     # endregion
 
-    async def fetch_book(
-        self, url: str, fetcher: FetcherInterface, attempts: int = 3
-    ) -> Book | None:
+    async def fetch_book(self, url: str, fetcher: FetcherInterface) -> Book | None:
         book: Book | None = None
         numero_options = {"id": 0}
         try:
             self._logger.debug(
-                f"get book details from URL: {url} (attempts left: {attempts})",
+                f"get book details from URL: {url}",
                 self.__class__.__name__,
             )
             html = await fetcher.fetch_text_async(url)
@@ -124,26 +116,12 @@ class OfficialBookUseCases(BookUseCasesInterface):
                 prices=self._get_prices(soup, url, []),
                 official=True,
             )
-        except httpx.ConnectTimeout as e:
-            self._logger.warning(
-                f"Connection timeout while fetching book details for URL: {url}",
-                self.__class__.__name__,
-            )
-            if attempts > 0:
-                self._logger.info(
-                    f"Retrying to fetch {url}: ({attempts} attempts left)",
-                    self.__class__.__name__,
-                )
-            else:
-                raise e
         except Exception as e:
             self._logger.error(
-                f"Error while fetching book details for URL: {url} - {e}",
+                f"Error while fetching book details for URL: {url} - reason: {e}",
                 self.__class__.__name__,
             )
 
-        if not book and attempts > 0:
-            return await self.fetch_book(url, fetcher, attempts - 1)
         return book
 
     # region dependencies: fetch_book
