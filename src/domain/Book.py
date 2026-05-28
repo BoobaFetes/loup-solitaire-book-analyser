@@ -6,6 +6,27 @@ from domain.BookPrice import BookPrice
 class Book(BaseModel):
     """Represents a book entity.
 
+
+    id: the unique identifier of the book, set to 0 by default and will be updated from numero if not set.
+
+    url: the URL of the book's page.
+
+    isbn: the ISBN of the book.
+
+    numero: the numero of the book, used to set the ID if ID is not already set. Can be negative if the number of the book is not found in the url
+
+    titre: the title of the book.
+
+    authors: the list of authors of the book.
+
+    image: the image in base64 format.
+
+    description: the description of the book.
+
+    official: whether the book is official or not.
+
+    prices: the list of prices for the book.
+
     Args:
         BaseModel: The base model class from Pydantic.
     """
@@ -16,10 +37,10 @@ class Book(BaseModel):
     numero: int
     titre: str
     authors: list[str] = Field(default_factory=lambda: [])
-    image: str
     description: str
     official: bool
     prices: list[BookPrice] = Field(default_factory=lambda: [])
+    image: str
 
     @model_validator(mode="after")
     def set_id_from_numero(self) -> "Book":

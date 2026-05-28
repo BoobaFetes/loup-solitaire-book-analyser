@@ -1,5 +1,6 @@
 import asyncio
-from typing import Literal
+import base64
+from typing import Literal, cast
 
 import httpx
 from bs4 import BeautifulSoup, Tag
@@ -34,6 +35,8 @@ class OfficialBookUseCases(BookUseCasesInterface):
             ]
             results = [book for book in await asyncio.gather(*tasks) if book]
         return results
+
+    # region dependencies: fetch_books
 
     async def _fetch_book_urls(self, fetcher: FetcherInterface):
         # arrange
@@ -81,7 +84,7 @@ class OfficialBookUseCases(BookUseCasesInterface):
         self._logger.debug(f"Found {len(result)} book URLs", self.__class__.__name__)
         return result
 
-    # region _get_book method and dependencies functions
+    # endregion
 
     async def fetch_book(
         self, url: str, fetcher: FetcherInterface, attempts: int = 3
@@ -117,7 +120,7 @@ class OfficialBookUseCases(BookUseCasesInterface):
                 titre=self._get_title(soup, ""),
                 description=self._get_description(soup, ""),
                 isbn=self._get_isbn(soup, ""),
-                image=self._get_image(soup, ""),
+                image=await self._get_image_url(soup, fetcher),
                 prices=self._get_prices(soup, url, []),
                 official=True,
             )
@@ -142,6 +145,8 @@ class OfficialBookUseCases(BookUseCasesInterface):
         if not book and attempts > 0:
             return await self.fetch_book(url, fetcher, attempts - 1)
         return book
+
+    # region dependencies: fetch_book
 
     def _get_authors(self, soup: BeautifulSoup) -> list[str]:
         elements = soup.select("div.Book-contributors > p > a")
@@ -200,8 +205,32 @@ class OfficialBookUseCases(BookUseCasesInterface):
         element = soup.select_one("div.Book-resume")
         return element.get_text(strip=True) if element else default_value
 
-    def _get_image(self, soup: BeautifulSoup, default_value: str = "") -> str:
-        return ""
+    async def _get_image_url(
+        self, soup: BeautifulSoup, fetcher: FetcherInterface, default_value: str = ""
+    ) -> str:
+        element = soup.select_one("div.Book-cover img:first-child")
+        if not element:
+            return default_value
+
+        url = (
+            cast(str, element.attrs["src"])
+            if element.attrs.get("src", "")
+            else default_value
+        )
+        if not url:
+            return default_value
+
+        try:
+            image_bytes = await fetcher.fetch_content_async(url)
+            image = base64.b64encode(image_bytes).decode("utf-8")
+            return image
+        except Exception:
+            self._logger.warning(
+                f"Failed to fetch or encode image from URL: {url}. See above for details.",
+                self.__class__.__name__,
+            )
+
+        return default_value
 
     def _get_prices(
         self, soup: BeautifulSoup, url: str, default_value: list[BookPrice] = []
