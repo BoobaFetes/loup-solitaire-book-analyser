@@ -34,8 +34,7 @@ class NonOfficialBookUseCases(BookUseCasesInterface):
 
     async def fetch_books(self, fetcher: FetcherInterface) -> list[Book]:
         results: list[Book] = []
-        # attention, le site de la bibliothèque des aventuriers est très lent et instable, il faut prévoir plusieurs tentatives pour éviter les erreurs de timeout ou de connexion
-        book_details_attempts = 3
+
         async with fetcher as fetcher:
             self._logger.info(
                 "Fetching main page to find url of books", self.__class__.__name__
