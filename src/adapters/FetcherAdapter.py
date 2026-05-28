@@ -1,10 +1,9 @@
+import asyncio
 import logging
 from typing import Any
 
 import httpx
-from bs4 import BeautifulSoup, ResultSet, Tag
 
-from domain import URLContent
 from ports import FetcherInterface, LoggerInterface
 
 
@@ -42,8 +41,9 @@ class FetcherAdapter(FetcherInterface):
         FetcherInterface: L'interface de lecture HTML.
     """
 
-    def __init__(self, logger: LoggerInterface):
+    def __init__(self, logger: LoggerInterface, retry_delay: int = 1):
         self.__logger: LoggerInterface = logger
+        self.__retry_delay: int = retry_delay
         HttpxLogHandler.setup(logger, "FetcherAdapter")
 
     # region Context manager methods
@@ -58,7 +58,7 @@ class FetcherAdapter(FetcherInterface):
 
     # endregion
 
-    async def fetch_json_async(self, url: str) -> dict[str, Any]:
+    async def fetch_json_async(self, url: str, retry: int = 3) -> dict[str, Any]:
         """Fetch JSON data from a URL.
 
         Args:
@@ -75,10 +75,12 @@ class FetcherAdapter(FetcherInterface):
         Returns:
             dict[str, Any]: The JSON response from the server.
         """
-        response = await self._fetch(url)
+        response = await self._fetch(url, retry)
         return response.json()
 
-    async def fetch_text_async(self, url: str, encoding: str | None = None) -> str:
+    async def fetch_text_async(
+        self, url: str, encoding: str | None = None, retry: int = 3
+    ) -> str:
         """Fetch text data from a URL.
 
         Args:
@@ -95,7 +97,7 @@ class FetcherAdapter(FetcherInterface):
         Returns:
             str: The text response from the server.
         """
-        response = await self._fetch(url)
+        response = await self._fetch(url, retry)
         if not encoding:
             return response.text  # httpx will use the charset from the response headers or fallback to utf-8
         else:
@@ -103,139 +105,70 @@ class FetcherAdapter(FetcherInterface):
                 encoding
             )  # decode the content with the specified encoding
 
+    async def fetch_content_async(self, url: str, retry: int = 3) -> bytes:
+        """Fetch content data from a URL.
+
+        Args:
+            url (str): The URL to fetch.
+
+        Returns:
+            bytes: The content response from the server.
+        """
+        response = await self._fetch(url, retry)
+        return response.content
+
     # region private methods to call
 
-    async def _fetch(self, url: str) -> httpx.Response:
+    async def _fetch(self, url: str, retry: int = 3) -> httpx.Response:
         try:
             response = await self._client.get(url)
             response.raise_for_status()
             return response
         except httpx.ConnectTimeout as e:
             self.__logger.critical(
-                f"Connection timeout occurred: {e}", self.__class__.__name__
+                f"Connection timeout occurred: {e or 'not set'}",
+                self.__class__.__name__,
             )
-            raise
+            if retry:
+                return await self._retry(url, retry - 1)
+            else:
+                raise
         except httpx.ConnectError as e:
             self.__logger.critical(
-                f"Connection error occurred: {e}", self.__class__.__name__
+                f"Connection error occurred: {e or 'not set'}",
+                self.__class__.__name__,
             )
-            raise
+            if retry:
+                return await self._retry(url, retry - 1)
+            else:
+                raise
         except httpx.RequestError as e:
             self.__logger.critical(
-                f"Request error occurred: {e}", self.__class__.__name__
+                f"Request error occurred: {e or 'not set'}", self.__class__.__name__
             )
             raise
         except httpx.HTTPStatusError as e:
             self.__logger.critical(
-                f"HTTP status error occurred: {e}", self.__class__.__name__
+                f"HTTP status error occurred: {e or 'not set'}", self.__class__.__name__
             )
             raise
         except httpx.HTTPError as e:
-            self.__logger.critical(f"HTTP error occurred: {e}", self.__class__.__name__)
+            self.__logger.critical(
+                f"HTTP error occurred: {e or 'not set'}", self.__class__.__name__
+            )
             raise
         except Exception as e:
             self.__logger.critical(
-                f"Unexpected error occurred: {e}", self.__class__.__name__
+                f"Unexpected error occurred: {e or 'not set'}", self.__class__.__name__
             )
             raise
 
-    # endregion
-
-    async def load_async(self, url: str, async_client: httpx.AsyncClient) -> URLContent:
-        """Load content from a URL asynchronously.
-
-        Args:
-            url (str): The URL to load.
-            async_client (httpx.AsyncClient): The HTTP client to use.
-
-        Returns:
-            URLContent: The content loaded from the URL.
-        """
-        try:
-            response = await async_client.get(
-                url
-            )  # utilise le client passé en paramètre
-            response.raise_for_status()
-            return URLContent(url=url, text=response.content.decode("latin-1"))
-        except httpx.RequestError as e:
-            self.__logger.critical(
-                f"Request error occurred: {e}", self.__class__.__name__
-            )
-            raise
-        except httpx.HTTPStatusError as e:
-            self.__logger.critical(
-                f"HTTP status error occurred: {e}", self.__class__.__name__
-            )
-            raise
-        except httpx.HTTPError as e:
-            self.__logger.critical(f"HTTP error occurred: {e}", self.__class__.__name__)
-            raise
-        except Exception as e:
-            self.__logger.critical(
-                f"Unexpected error occurred: {e}", self.__class__.__name__
-            )
-            raise
-
-    def load(self, url: str) -> URLContent:
-        """Load content from a URL.
-
-        Args:
-            url (str): The URL to load.
-
-        Returns:
-            URLContent: The content loaded from the URL.
-        """
-        try:
-            response = httpx.get(url)
-            response.raise_for_status()
-            return URLContent(url=url, text=response.content.decode("latin-1"))
-        except httpx.RequestError as e:
-            self.__logger.critical(
-                f"Request error occurred: {e}", self.__class__.__name__
-            )
-            raise
-        except httpx.HTTPStatusError as e:
-            self.__logger.critical(
-                f"HTTP status error occurred: {e}", self.__class__.__name__
-            )
-            raise
-        except httpx.HTTPError as e:
-            self.__logger.critical(f"HTTP error occurred: {e}", self.__class__.__name__)
-            raise
-        except Exception as e:
-            self.__logger.critical(
-                f"Unexpected error occurred: {e}", self.__class__.__name__
-            )
-            raise
-
-    def prettify_html(self, html: str) -> str:
-        """Prettify the HTML content.
-
-        Args:
-            html (str): The HTML content to prettify.
-
-        Returns:
-            str: The prettified HTML content.
-        """
-        soup = BeautifulSoup(html, "html.parser")
-        return soup.prettify()
-
-    def select_all_by_selector(
-        self, content: URLContent, selector: str
-    ) -> ResultSet[Tag]:
-        """Select elements from the HTML content using a CSS selector.
-
-        Args:
-            content (URLContent): The HTML content to search.
-            selector (str): The CSS selector to use for selection.
-
-        Returns:
-            ResultSet[Tag]: The elements matching the selector.
-        """
-        self.__logger.info(
-            f"Listing all elements matching selector: {selector}",
+    async def _retry(self, url: str, retry: int) -> httpx.Response:
+        self.__logger.warning(
+            f"Retrying to fetch after {self.__retry_delay} seconds - retry left: {retry} - URL: {url}",
             self.__class__.__name__,
         )
-        soup = BeautifulSoup(content.text, "html.parser")
-        elements = soup.select(selector)
-        return elements
+        await asyncio.sleep(self.__retry_delay)
+        return await self._fetch(url, retry)
+
+    # endregion

@@ -18,9 +18,7 @@ class BookUseCasesInterface:
     async def fetch_books(self, fetcher: FetcherInterface) -> list[Book]:
         raise NotImplementedError
 
-    async def fetch_book(
-        self, url: str, fetcher: FetcherInterface, attempts: int = 3
-    ) -> Book | None:
+    async def fetch_book(self, url: str, fetcher: FetcherInterface) -> Book | None:
         raise NotImplementedError
 
     def get_total_and_average_by_currency(self) -> dict[str, tuple[float, float]]:

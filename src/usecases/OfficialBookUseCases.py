@@ -1,7 +1,7 @@
 import asyncio
-from typing import Literal
+import base64
+from typing import Literal, cast
 
-import httpx
 from bs4 import BeautifulSoup, Tag
 
 from domain import Book, BookPrice
@@ -16,9 +16,6 @@ class OfficialBookUseCases(BookUseCasesInterface):
 
     async def fetch_books(self, fetcher: FetcherInterface) -> list[Book]:
         results: list[Book] = []
-        # attention, le site de gallimard est plutôt rapide mais parfois, le soir surtout, il peut être un peu instable et il vaut mieux prévoir plusieurs tentatives pour éviter les erreurs de timeout ou de connexion
-        # à voir s'il faudra rajouter du delai entre deux tentatives pour éviter de surcharger le site et d'augmenter les chances de succès
-        book_details_attempts = 3
 
         async with fetcher as fetcher:
             self._logger.info(
@@ -29,11 +26,11 @@ class OfficialBookUseCases(BookUseCasesInterface):
             self._logger.info(
                 f"Fetching book details for {len(urls)} URLs", self.__class__.__name__
             )
-            tasks = [
-                self.fetch_book(url, fetcher, book_details_attempts) for url in urls
-            ]
+            tasks = [self.fetch_book(url, fetcher) for url in urls]
             results = [book for book in await asyncio.gather(*tasks) if book]
         return results
+
+    # region dependencies: fetch_books
 
     async def _fetch_book_urls(self, fetcher: FetcherInterface):
         # arrange
@@ -81,16 +78,14 @@ class OfficialBookUseCases(BookUseCasesInterface):
         self._logger.debug(f"Found {len(result)} book URLs", self.__class__.__name__)
         return result
 
-    # region _get_book method and dependencies functions
+    # endregion
 
-    async def fetch_book(
-        self, url: str, fetcher: FetcherInterface, attempts: int = 3
-    ) -> Book | None:
+    async def fetch_book(self, url: str, fetcher: FetcherInterface) -> Book | None:
         book: Book | None = None
         numero_options = {"id": 0}
         try:
             self._logger.debug(
-                f"get book details from URL: {url} (attempts left: {attempts})",
+                f"get book details from URL: {url}",
                 self.__class__.__name__,
             )
             html = await fetcher.fetch_text_async(url)
@@ -117,30 +112,19 @@ class OfficialBookUseCases(BookUseCasesInterface):
                 titre=self._get_title(soup, ""),
                 description=self._get_description(soup, ""),
                 isbn=self._get_isbn(soup, ""),
+                image=await self._get_image_url(soup, fetcher),
                 prices=self._get_prices(soup, url, []),
                 official=True,
             )
-        except httpx.ConnectTimeout as e:
-            self._logger.warning(
-                f"Connection timeout while fetching book details for URL: {url}",
-                self.__class__.__name__,
-            )
-            if attempts > 0:
-                self._logger.info(
-                    f"Retrying to fetch {url}: ({attempts} attempts left)",
-                    self.__class__.__name__,
-                )
-            else:
-                raise e
         except Exception as e:
             self._logger.error(
-                f"Error while fetching book details for URL: {url} - {e}",
+                f"Error while fetching book details for URL: {url} - reason: {e}",
                 self.__class__.__name__,
             )
 
-        if not book and attempts > 0:
-            return await self.fetch_book(url, fetcher, attempts - 1)
         return book
+
+    # region dependencies: fetch_book
 
     def _get_authors(self, soup: BeautifulSoup) -> list[str]:
         elements = soup.select("div.Book-contributors > p > a")
@@ -198,6 +182,33 @@ class OfficialBookUseCases(BookUseCasesInterface):
 
         element = soup.select_one("div.Book-resume")
         return element.get_text(strip=True) if element else default_value
+
+    async def _get_image_url(
+        self, soup: BeautifulSoup, fetcher: FetcherInterface, default_value: str = ""
+    ) -> str:
+        element = soup.select_one("div.Book-cover img:first-child")
+        if not element:
+            return default_value
+
+        url = (
+            cast(str, element.attrs["src"])
+            if element.attrs.get("src", "")
+            else default_value
+        )
+        if not url:
+            return default_value
+
+        try:
+            image_bytes = await fetcher.fetch_content_async(url)
+            image = base64.b64encode(image_bytes).decode("utf-8")
+            return image
+        except Exception:
+            self._logger.warning(
+                f"Failed to fetch or encode image from URL: {url}. See above for details.",
+                self.__class__.__name__,
+            )
+
+        return default_value
 
     def _get_prices(
         self, soup: BeautifulSoup, url: str, default_value: list[BookPrice] = []

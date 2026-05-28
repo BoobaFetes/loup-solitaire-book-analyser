@@ -1,8 +1,8 @@
 import asyncio
+import base64
 import re
 from typing import cast
 
-import httpx
 from bs4 import BeautifulSoup, Tag
 
 from domain import Book
@@ -47,12 +47,12 @@ class NonOfficialBookUseCases(BookUseCasesInterface):
             self._logger.info(
                 f"Fetching book details for {len(urls)} URLs", self.__class__.__name__
             )
-            tasks = [
-                self.fetch_book(url, fetcher, book_details_attempts) for url in urls
-            ]
+            tasks = [self.fetch_book(url, fetcher) for url in urls]
             results = [book for book in await asyncio.gather(*tasks) if book]
 
         return results
+
+    # region dependencies: fetch_books
 
     async def _fetch_book_urls(self, fetcher: FetcherInterface):
         # arrange
@@ -79,16 +79,14 @@ class NonOfficialBookUseCases(BookUseCasesInterface):
             for anchor in anchors
         ]
 
-    # region _get_book method and dependencies functions
+    # endregion
 
-    async def fetch_book(
-        self, url: str, fetcher: FetcherInterface, attempts: int = 3
-    ) -> Book | None:
+    async def fetch_book(self, url: str, fetcher: FetcherInterface) -> Book | None:
         book: Book | None = None
         numero_options = {"id": 0}
         try:
             self._logger.debug(
-                f"get book details from URL: {url} (attempts left: {attempts})",
+                f"get book details from URL: {url}",
                 self.__class__.__name__,
             )
             html = await fetcher.fetch_text_async(url, "latin-1")
@@ -115,30 +113,19 @@ class NonOfficialBookUseCases(BookUseCasesInterface):
                 titre=self._get_title(soup, ""),
                 description=self._get_description(soup, ""),
                 isbn=self._get_isbn(soup, ""),
+                image=await self._get_image_url(soup, fetcher),
                 prices=[],
                 official=False,
             )
-        except httpx.ConnectTimeout as e:
-            self._logger.warning(
-                f"Connection timeout while fetching book details for URL: {url}",
-                self.__class__.__name__,
-            )
-            if attempts > 0:
-                self._logger.info(
-                    f"Retrying to fetch {url}: ({attempts} attempts left)",
-                    self.__class__.__name__,
-                )
-            else:
-                raise e
         except Exception as e:
             self._logger.error(
-                f"Error while fetching book details for URL: {url} - {e}",
+                f"Error while fetching book details for URL: {url} - reason: {e}",
                 self.__class__.__name__,
             )
 
-        if not book and attempts > 0:
-            return await self.fetch_book(url, fetcher, attempts - 1)
         return book
+
+    # region dependencies: fetch_book
 
     def _get_numero(self, soup: BeautifulSoup, options: dict[str, int]) -> int:
         # arrange
@@ -156,14 +143,6 @@ class NonOfficialBookUseCases(BookUseCasesInterface):
 
         options["id"] -= 1
         return options["id"]
-
-    def _is_classic_version(self, soup: BeautifulSoup) -> bool:
-        element = soup.select_one("table#AutoNumber1 p:nth-child(1)")
-        if not element:
-            return False
-
-        titre = element.get_text(strip=True)
-        return "classique)" in titre.lower()
 
     def _get_title(self, soup: BeautifulSoup, default_value: str) -> str:
         element = soup.select_one("table#AutoNumber1 p:nth-child(1)")
@@ -210,7 +189,42 @@ class NonOfficialBookUseCases(BookUseCasesInterface):
         description = re.sub(r"\s+", " ", description).strip()
         return description
 
-    # endregion
+    async def _get_image_url(
+        self, soup: BeautifulSoup, fetcher: FetcherInterface, default_value: str = ""
+    ) -> str:
+        elements = soup.select("table#AutoNumber1 a")
+        if not elements:
+            return default_value
+
+        urls = [
+            cast(str, element.attrs["href"]).replace("../..", self._url_base)
+            for element in elements
+            if element.name == "a" and "href" in element.attrs
+        ]
+
+        url = urls[-1].replace("../..", self._url_base) if len(urls) else default_value
+        if not url:
+            return default_value
+
+        try:
+            image_bytes = await fetcher.fetch_content_async(url)
+            image = base64.b64encode(image_bytes).decode("utf-8")
+            return image
+        except Exception:
+            self._logger.warning(
+                f"Failed to fetch or encode image from URL: {url}. See above for details.",
+                self.__class__.__name__,
+            )
+
+        return default_value
+
+    def _is_classic_version(self, soup: BeautifulSoup) -> bool:
+        element = soup.select_one("table#AutoNumber1 p:nth-child(1)")
+        if not element:
+            return False
+
+        titre = element.get_text(strip=True)
+        return "classique)" in titre.lower()
 
     # endregion
 
