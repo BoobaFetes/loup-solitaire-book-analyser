@@ -1,0 +1,132 @@
+import os
+from logging import Handler, Logger, StreamHandler, basicConfig, handlers
+from pathlib import Path
+
+from dependency_injector import containers, providers
+
+from adapters import (
+    BookFileRepository,
+    FileSystemAdapter,
+    HttpClientAdapter,
+)
+from usecases import BookUseCases
+from usecases.NonOfficialBookUseCases import NonOfficialBookUseCases
+from usecases.OfficialBookUseCases import OfficialBookUseCases
+
+
+def _make_logging_handlers(root_dir: str, log_file: str) -> list[Handler]:
+    log_path = (Path(root_dir) / log_file).resolve()
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    return [
+        # permet de faire une rotation des logs tous les jours à minuit et conservation des 31 derniers jours de log
+        handlers.TimedRotatingFileHandler(
+            filename=log_path,
+            when="midnight",  # Rotate at midnight
+            interval=1,  # Rotate daily
+            backupCount=31,  # Keep 31 days of logs
+        ),
+        # garde aussi les logs console pour faciliter le développement et le debug ou voir directement dans k8s
+        StreamHandler(),
+    ]
+
+
+class IocContainer(containers.DeclarativeContainer):
+    config = providers.Configuration()
+
+    # resources
+    logging = providers.Resource(
+        basicConfig,
+        level=config.log_level,
+        format="[%(levelname)s] [%(name)s] [task=%(taskName)s] %(asctime)s - %(message)s",
+        handlers=providers.Factory(
+            _make_logging_handlers,
+            root_dir=config.root_dir,
+            log_file=config.log_file,
+        ),
+    )
+
+    # adapters (ports implementation)
+
+    http_client = providers.Singleton(
+        HttpClientAdapter,
+        retry_delay=config.api_timeout,
+    )
+
+    file_system = providers.Singleton(
+        FileSystemAdapter,
+        path=config.root_dir,
+    )
+    book_repository = providers.Singleton(
+        BookFileRepository,
+        fs=file_system,
+        connection_string=config.connection_string,
+    )
+
+    # usecases
+
+    official_book_usecases = providers.Singleton(
+        OfficialBookUseCases,
+        repository=book_repository,
+        client=http_client,
+    )
+
+    non_official_book_usecases = providers.Singleton(
+        NonOfficialBookUseCases,
+        repository=book_repository,
+        client=http_client,
+    )
+
+    book_usecases = providers.Singleton(
+        BookUseCases,
+        repository=book_repository,
+        client=http_client,
+        official_book=official_book_usecases,
+        non_official_book=non_official_book_usecases,
+    )
+
+
+def new_ioc_container() -> IocContainer:
+    container = IocContainer()
+
+    # load environment variables
+    container.config.env.from_env("ENV", default="dev")
+    if container.config.env() == "dev":
+        # charge les variables du fichier .env si l'environnement est dev car pour tout autre environnement ces variables sont fourni via l'environnement d'exécution (ex: docker, kubernetes, etc...)
+        from dotenv import load_dotenv
+
+        load_dotenv()
+
+    # bind configuration values
+    container.config.root_dir.from_env("ROOT_DIR", default=os.getcwd())
+    container.config.api_timeout.from_env("API_TIMEOUT", default=0.5)
+    container.config.connection_string.from_env("CONNECTION_STRING", required=True)
+    container.config.log_level.from_env("LOG_LEVEL", default="INFO")
+    container.config.log_file.from_env("LOG_FILE", required=True)
+
+    # check values
+    root_dir = Path(container.config.root_dir())
+    if root_dir.is_file():
+        raise ValueError(
+            "root_dir must be a directory, not a file. Value provided: " + str(root_dir)
+        )
+    if not root_dir.exists():
+        raise ValueError(
+            "root_dir must be an existing directory. Value provided: " + str(root_dir)
+        )
+
+    container.init_resources()
+    return container
+
+
+def print_environment_variables(container: IocContainer, logger: Logger):
+    variables = [
+        ("ENV", os.getenv("ENV", "dev")),
+        ("ROOT_DIR", container.config.root_dir()),
+        ("API_TIMEOUT", container.config.api_timeout()),
+        ("CONNECTION_STRING", container.config.connection_string()),
+        ("LOG_LEVEL", container.config.log_level()),
+        ("LOG_FILE", container.config.log_file()),
+    ]
+    logger.info("environment variables:")
+    for key, value in variables:
+        logger.info(f" - {key} = {value}")

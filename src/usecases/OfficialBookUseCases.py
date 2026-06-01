@@ -5,7 +5,7 @@ from typing import Literal, cast
 from bs4 import BeautifulSoup, Tag
 
 from domain import Book, BookPrice
-from ports import FetcherInterface
+from ports import HttpClientBase
 from usecases.BookUseCasesInterface import BookUseCasesInterface
 
 
@@ -14,25 +14,21 @@ class OfficialBookUseCases(BookUseCasesInterface):
 
     _url_base: str = "https://www.gallimard-jeunesse.fr"
 
-    async def fetch_books(self, fetcher: FetcherInterface) -> list[Book]:
+    async def fetch_books(self, client: HttpClientBase | None = None) -> list[Book]:
         results: list[Book] = []
 
-        async with fetcher as fetcher:
-            self._logger.info(
-                "Fetching main page to find url of books", self.__class__.__name__
-            )
-            urls = await self._fetch_book_urls(fetcher)
+        active_client = client or self._client
+        async with active_client as client_instance:
+            urls = await self._fetch_book_urls(client_instance)
 
-            self._logger.info(
-                f"Fetching book details for {len(urls)} URLs", self.__class__.__name__
-            )
-            tasks = [self.fetch_book(url, fetcher) for url in urls]
+            self._logger.info(f"Fetching book details for {len(urls)} URLs")
+            tasks = [self.fetch_book(url, client_instance) for url in urls]
             results = [book for book in await asyncio.gather(*tasks) if book]
         return results
 
     # region dependencies: fetch_books
 
-    async def _fetch_book_urls(self, fetcher: FetcherInterface):
+    async def _fetch_book_urls(self, client: HttpClientBase):
         # arrange
         def _build_full_url(segment: str) -> str:
             return f"{self._url_base}{segment}"
@@ -42,15 +38,12 @@ class OfficialBookUseCases(BookUseCasesInterface):
 
         while segment:
             # fetch page content
-            self._logger.debug(
-                f"Fetching URL segment: {segment}", self.__class__.__name__
-            )
-            json = await fetcher.fetch_json_async(_build_full_url(segment))
+            self._logger.info(f"Fetching list of books from '{segment}'")
+            json = await client.get_json(_build_full_url(segment))
 
             # parse HTML content to find book detail links
-            self._logger.debug(
-                "Parsing HTML content for book details page links",
-                self.__class__.__name__,
+            self._logger.info(
+                f"Parsing HTML content from '{_build_full_url(segment)}' to find book details",
             )
             html = json.get("html", "")
             if html:
@@ -66,43 +59,43 @@ class OfficialBookUseCases(BookUseCasesInterface):
                 )
             else:
                 self._logger.warning(
-                    f"No HTML content found for: {segment}", self.__class__.__name__
+                    f"No HTML content found at '{_build_full_url(segment)}'"
                 )
 
             # check for next page URL
             next_url: str | Literal[False] = json.get("next-url", False)
             segment = next_url if next_url else ""
             if not segment:
-                self._logger.debug("no more pages to fetch", self.__class__.__name__)
+                self._logger.info("no more pages to fetch")
 
-        self._logger.debug(f"Found {len(result)} book URLs", self.__class__.__name__)
+        self._logger.info(f"Found {len(result)} book URLs")
         return result
 
     # endregion
 
-    async def fetch_book(self, url: str, fetcher: FetcherInterface) -> Book | None:
+    async def fetch_book(
+        self, url: str, client: HttpClientBase | None = None
+    ) -> Book | None:
         book: Book | None = None
         numero_options = {"id": 0}
         try:
-            self._logger.debug(
+            self._logger.info(
                 f"get book details from URL: {url}",
-                self.__class__.__name__,
             )
-            html = await fetcher.fetch_text_async(url)
+            active_client = client or self._client
+            html = await active_client.get_text(url)
             soup = BeautifulSoup(html, "html.parser")
 
             if "Joe Dever" not in self._get_authors(soup):
                 self._logger.warning(
                     f"Book at URL: {url} does not have Joe Dever as author. Skipping.",
-                    self.__class__.__name__,
                 )
                 return None
 
             id = numero = self._get_numero(soup, numero_options)
             if numero < 0:
                 self._logger.warning(
-                    f"Could not find a valid numero for book at URL: {url}. Defaulting to {numero_options['id']}.",
-                    self.__class__.__name__,
+                    f"Could not find a valid book's number at URL: {url}. Defaulting to {numero_options['id']}.",
                 )
 
             book = Book(
@@ -112,14 +105,13 @@ class OfficialBookUseCases(BookUseCasesInterface):
                 titre=self._get_title(soup, ""),
                 description=self._get_description(soup, ""),
                 isbn=self._get_isbn(soup, ""),
-                image=await self._get_image_url(soup, fetcher),
+                image=await self._get_image_url(soup, active_client),
                 prices=self._get_prices(soup, url, []),
                 official=True,
             )
         except Exception as e:
             self._logger.error(
                 f"Error while fetching book details for URL: {url} - reason: {e}",
-                self.__class__.__name__,
             )
 
         return book
@@ -184,7 +176,7 @@ class OfficialBookUseCases(BookUseCasesInterface):
         return element.get_text(strip=True) if element else default_value
 
     async def _get_image_url(
-        self, soup: BeautifulSoup, fetcher: FetcherInterface, default_value: str = ""
+        self, soup: BeautifulSoup, client: HttpClientBase, default_value: str = ""
     ) -> str:
         element = soup.select_one("div.Book-cover img:first-child")
         if not element:
@@ -199,13 +191,12 @@ class OfficialBookUseCases(BookUseCasesInterface):
             return default_value
 
         try:
-            image_bytes = await fetcher.fetch_content_async(url)
+            image_bytes = await client.get_content(url)
             image = base64.b64encode(image_bytes).decode("utf-8")
             return image
         except Exception:
             self._logger.warning(
                 f"Failed to fetch or encode image from URL: {url}. See above for details.",
-                self.__class__.__name__,
             )
 
         return default_value
@@ -233,9 +224,7 @@ class OfficialBookUseCases(BookUseCasesInterface):
     # endregion
 
     def get_total_and_average_by_currency(self) -> dict[str, tuple[float, float]]:
-        self._logger.info(
-            "Calculating total and average prices", self.__class__.__name__
-        )
+        self._logger.info("Calculating total and average prices")
         books = self._repository.list()
         books_by_currency: dict[str, dict[str, float]] = {}
         for book in books:

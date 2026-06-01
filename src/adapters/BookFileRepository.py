@@ -13,12 +13,13 @@ implémentation concrète. On peut remplacer BookFileRepository par une
 implémentation DB sans modifier le domaine.
 """
 
+import logging
 from json import dumps as json_dumps
 from json import loads as json_loads
 from typing import Any, List
 
 from domain import Book
-from ports import BookRepositoryInterface, FileSystemInterface, LoggerInterface
+from ports import BookRepositoryInterface, FileSystemInterface
 
 
 class BookFileRepository(BookRepositoryInterface):
@@ -34,11 +35,10 @@ class BookFileRepository(BookRepositoryInterface):
 
     def __init__(
         self,
-        logger: LoggerInterface,
         fs: FileSystemInterface,
         connection_string: str,
     ):
-        self._logger: LoggerInterface = logger
+        self._logger = logging.getLogger(self.__class__.__name__)
         self._fs: FileSystemInterface = fs
         self._connection_string: str = connection_string
         if not self._fs.is_file_exists(self._connection_string):
@@ -55,9 +55,8 @@ class BookFileRepository(BookRepositoryInterface):
         data: dict[str, Any] = json_loads(content)
 
         results = {key: Book(**item) for key, item in data.items()}
-        self._logger.debug(
+        self._logger.info(
             f"Extracted books from file system at {self._connection_string} : {len(results) + 1} items",
-            self.__class__.__name__,
         )
         return results
 
@@ -71,9 +70,8 @@ class BookFileRepository(BookRepositoryInterface):
         self._fs.write_file(
             self._connection_string, json_dumps(data, indent=2), withLog=False
         )
-        self._logger.debug(
+        self._logger.info(
             f"Persisted books to file system at {self._connection_string} : {len(books) + 1} items",
-            self.__class__.__name__,
         )
 
     # endregion
@@ -88,11 +86,10 @@ class BookFileRepository(BookRepositoryInterface):
             self._fs.write_file(self._connection_string, "{}")
             self._logger.info(
                 f"Cleared all books from file system at {self._connection_string}",
-                self.__class__.__name__,
             )
             return True
         except Exception as e:
-            self._logger.error(f"Error clearing books: {e}", self.__class__.__name__)
+            self._logger.error(f"Error clearing books: {e}")
         return False
 
     def list(self) -> List[Book]:
@@ -105,11 +102,10 @@ class BookFileRepository(BookRepositoryInterface):
             data: dict[str, Book] = self.__extract()
             self._logger.info(
                 f"Listed {len(data)} books from file system at {self._connection_string}",
-                self.__class__.__name__,
             )
             return list(data.values())
         except Exception as e:
-            self._logger.error(f"Error listing books: {e}", self.__class__.__name__)
+            self._logger.error(f"Error listing books: {e}")
         return []
 
     def add_many(self, books: List[Book]) -> int:
@@ -130,11 +126,10 @@ class BookFileRepository(BookRepositoryInterface):
             self.__persist(data)
             self._logger.info(
                 f"Added {count} books to file system at {self._connection_string}",
-                self.__class__.__name__,
             )
             return count
         except Exception as e:
-            self._logger.error(f"Error adding books: {e}", self.__class__.__name__)
+            self._logger.error(f"Error adding books: {e}")
 
         return 0
 
@@ -153,13 +148,10 @@ class BookFileRepository(BookRepositoryInterface):
             self.__persist(data)
             self._logger.info(
                 f"Added book {book.numero} to file system at {self._connection_string}",
-                self.__class__.__name__,
             )
             return True
         except Exception as e:
-            self._logger.error(
-                f"Error adding book {book.numero}: {e}", self.__class__.__name__
-            )
+            self._logger.error(f"Error adding book {book.numero}: {e}")
         return False
 
     def get(self, id: int) -> Book:
@@ -194,16 +186,14 @@ class BookFileRepository(BookRepositoryInterface):
             if item is not None:
                 self._logger.info(
                     f"Got book {item.id} from file system at {self._connection_string}",
-                    self.__class__.__name__,
                 )
                 return item
             else:
                 self._logger.info(
                     f"book id:{id} not found in file system at {self._connection_string}",
-                    self.__class__.__name__,
                 )
         except Exception as e:
-            self._logger.error(f"Error getting book {id}: {e}", self.__class__.__name__)
+            self._logger.error(f"Error getting book {id}: {e}")
         return None
 
     def update(self, book: Book) -> bool:
@@ -222,18 +212,14 @@ class BookFileRepository(BookRepositoryInterface):
                 self.__persist(data)
                 self._logger.info(
                     f"Updated book {book.numero} in file system at {self._connection_string}",
-                    self.__class__.__name__,
                 )
                 return True
             else:
                 self._logger.warning(
                     f"book {book.numero} not found in file system at {self._connection_string}",
-                    self.__class__.__name__,
                 )
         except Exception as e:
-            self._logger.error(
-                f"Error updating book {book.numero}: {e}", self.__class__.__name__
-            )
+            self._logger.error(f"Error updating book {book.numero}: {e}")
         return False
 
     def delete(self, numero: int) -> bool:
@@ -252,16 +238,12 @@ class BookFileRepository(BookRepositoryInterface):
                 self.__persist(data)
                 self._logger.info(
                     f"Removed book {numero} from file system at {self._connection_string}",
-                    self.__class__.__name__,
                 )
                 return True
             else:
                 self._logger.warning(
                     f"book {numero} not found in file system at {self._connection_string}",
-                    self.__class__.__name__,
                 )
         except Exception as e:
-            self._logger.error(
-                f"Error removing book {numero}: {e}", self.__class__.__name__
-            )
+            self._logger.error(f"Error removing book {numero}: {e}")
         return False

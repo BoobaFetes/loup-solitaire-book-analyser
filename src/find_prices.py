@@ -31,11 +31,11 @@
 #     fs,
 #     connection_string=env.get("CONNECTION_STRING"),
 # )
-# logger.debug("IOC : common instances (singleton) created", "INIT")
+# logger.info("IOC : common instances (singleton) created", "INIT")
 
 # # arrange
 # book_usecases = BookUseCases(book_repository, logger)
-# logger.debug("usecases created", "INIT")
+# logger.info("usecases created", "INIT")
 
 
 # # action

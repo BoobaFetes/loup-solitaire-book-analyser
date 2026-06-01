@@ -1,6 +1,7 @@
+import logging
 from pathlib import Path
 
-from ports import FileSystemInterface, LoggerInterface
+from ports import FileSystemInterface
 
 
 class FileSystemAdapter(FileSystemInterface):
@@ -10,8 +11,8 @@ class FileSystemAdapter(FileSystemInterface):
         FileSystemInterface: L'interface du système de fichiers.
     """
 
-    def __init__(self, logger: LoggerInterface, path: str):
-        self._logger: LoggerInterface = logger
+    def __init__(self, path: str):
+        self._logger = logging.getLogger(self.__class__.__name__)
         self._path: Path = Path(path)
 
     def is_file_exists(self, name: str) -> bool:
@@ -42,12 +43,9 @@ class FileSystemAdapter(FileSystemInterface):
                     file.unlink()
                 self._logger.info(
                     f"Cleared files matching '{pattern}' in directory: {self._path}",
-                    self.__class__.__name__,
                 )
         except Exception as e:
-            self._logger.critical(
-                f"Error clearing directory {self._path}: {e}", self.__class__.__name__
-            )
+            self._logger.critical(f"Error clearing directory {self._path}: {e}")
             raise
 
     def list_html_files(self) -> list[str]:
@@ -75,9 +73,7 @@ class FileSystemAdapter(FileSystemInterface):
         """
         try:
             if withLog:
-                self._logger.info(
-                    f"Reading file from path: {name}", self.__class__.__name__
-                )
+                self._logger.info(f"Reading file from path: {name}")
 
             with open(Path(self._path / name), "r", encoding="utf-8") as f:
                 content = f.read()
@@ -85,13 +81,11 @@ class FileSystemAdapter(FileSystemInterface):
         except FileNotFoundError as e:
             self._logger.critical(
                 f"File not found: {Path(self._path / name)}: {e}",
-                self.__class__.__name__,
             )
             raise
         except IOError as e:
             self._logger.critical(
                 f"Error reading file {Path(self._path / name)}: {e}",
-                self.__class__.__name__,
             )
             raise
 
@@ -112,9 +106,7 @@ class FileSystemAdapter(FileSystemInterface):
         current_path: Path = Path(self._path / name)
         try:
             if withLog:
-                self._logger.info(
-                    f"Writing file to path: {name}", self.__class__.__name__
-                )
+                self._logger.info(f"Writing file to path: {name}")
 
             # check arguments
             if current_path.suffix == "":
@@ -132,17 +124,11 @@ class FileSystemAdapter(FileSystemInterface):
             with open(current_path, "w", encoding="utf-8") as f:
                 f.write(content)
         except FileNotFoundError as e:
-            self._logger.critical(
-                f"File not found: {current_path}: {e}", self.__class__.__name__
-            )
+            self._logger.critical(f"File not found: {current_path}: {e}")
             raise
         except IOError as e:
-            self._logger.critical(
-                f"Error reading file {current_path}: {e}", self.__class__.__name__
-            )
+            self._logger.critical(f"Error reading file {current_path}: {e}")
             raise
         except Exception as e:
-            self._logger.critical(
-                f"Error saving file {current_path}: {e}", self.__class__.__name__
-            )
+            self._logger.critical(f"Error saving file {current_path}: {e}")
             raise

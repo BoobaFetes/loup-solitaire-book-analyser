@@ -1,9 +1,6 @@
-from adapters import FetcherAdapter
 from domain import Book
-from ports import BookRepositoryInterface, FetcherInterface, LoggerInterface
+from ports import BookRepositoryInterface, HttpClientBase
 from usecases.BookUseCasesInterface import BookUseCasesInterface
-from usecases.NonOfficialBookUseCases import NonOfficialBookUseCases
-from usecases.OfficialBookUseCases import OfficialBookUseCases
 
 
 class BookUseCases(BookUseCasesInterface):
@@ -14,22 +11,24 @@ class BookUseCases(BookUseCasesInterface):
     def __init__(
         self,
         repository: BookRepositoryInterface,
-        logger: LoggerInterface,
+        client: HttpClientBase,
+        official_book: BookUseCasesInterface,
+        non_official_book: BookUseCasesInterface,
     ):
-        super().__init__(repository, logger)
-        self._official_book: BookUseCasesInterface = OfficialBookUseCases(
-            repository, logger
-        )
-        self._non_official_book: BookUseCasesInterface = NonOfficialBookUseCases(
-            repository, logger
-        )
+        super().__init__(repository, client)
+        self._official_book: BookUseCasesInterface = official_book
+        self._non_official_book: BookUseCasesInterface = non_official_book
 
-    async def fetch_books(self, fetcher=FetcherInterface()) -> list[Book]:
+    async def fetch_books(self, client: HttpClientBase | None = None) -> list[Book]:
         books_sources: list[list[Book]] = []
 
-        async with FetcherAdapter(self._logger) as _fetcher:
-            books_sources.append(await self._official_book.fetch_books(_fetcher))
-            books_sources.append(await self._non_official_book.fetch_books(_fetcher))
+        self._logger.info("Fetching books from sources")
+        active_client = client or self._client
+        async with active_client as client_instance:
+            books_sources.append(await self._official_book.fetch_books(client_instance))
+            books_sources.append(
+                await self._non_official_book.fetch_books(client_instance)
+            )
 
         books_set: set[Book] = set(books_sources[0])
         non_official_books_set: set[Book] = set(books_sources[1])
@@ -41,26 +40,17 @@ class BookUseCases(BookUseCasesInterface):
         # tri par id de livre (on s'attend à id==numero) pour simplifier la lecture et la maintenance
         books.sort(key=lambda b: b.id)
 
-        self._logger.debug("records books in repository", self.__class__.__name__)
+        self._logger.info("records books in repository")
         self._repository.clear()
         added_count = self._repository.add_many(books)
         if added_count != len(books):
-            self._logger.warning(
-                "Not all books were added to the repository.", self.__class__.__name__
-            )
+            self._logger.warning("Not all books were added to the repository.")
             raise ValueError("Not all books were added to the repository.")
 
         return self._repository.list()
 
-    async def fetch_book(
-        self, url: str, fetcher: FetcherInterface, attempts: int = 3
-    ) -> Book | None:
-        raise NotImplementedError
-
     def get_total_and_average_by_currency(self) -> dict[str, tuple[float, float]]:
-        self._logger.info(
-            "Calculating total and average prices", self.__class__.__name__
-        )
+        self._logger.info("Calculating total and average prices")
         books = self._repository.list()
         books_by_currency: dict[str, dict[str, float]] = {}
         for book in books:
