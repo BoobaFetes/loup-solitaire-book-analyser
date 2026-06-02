@@ -69,12 +69,14 @@ class IocContainer(containers.DeclarativeContainer):
         OfficialBookUseCases,
         repository=book_repository,
         client=http_client,
+        parallel_calls=config.api_parallel_calls,
     )
 
     non_official_book_usecases = providers.Singleton(
         NonOfficialBookUseCases,
         repository=book_repository,
         client=http_client,
+        parallel_calls=config.api_parallel_calls,
     )
 
     book_usecases = providers.Singleton(
@@ -84,6 +86,17 @@ class IocContainer(containers.DeclarativeContainer):
         official_book=official_book_usecases,
         non_official_book=non_official_book_usecases,
     )
+
+
+def check_numeric_env_variables(
+    wanted_type: type, value: str, variable_name: str
+) -> int | float | None:
+    try:
+        return wanted_type(value)
+    except (TypeError, ValueError) as e:
+        raise ValueError(
+            f"{variable_name} must be a {wanted_type.__name__}. Value provided: {value}"
+        ) from e
 
 
 def new_ioc_container() -> IocContainer:
@@ -100,19 +113,20 @@ def new_ioc_container() -> IocContainer:
     # bind configuration values
     container.config.root_dir.from_env("ROOT_DIR", default=os.getcwd())
     container.config.api_timeout.from_env("API_TIMEOUT", default=0.5)
+    container.config.api_parallel_calls.from_env("API_PARALLEL_CALLS", default=2)
     container.config.connection_string.from_env("CONNECTION_STRING", required=True)
     container.config.log_level.from_env("LOG_LEVEL", default="INFO")
     container.config.log_file.from_env("LOG_FILE", required=True)
 
     # environment variables are strings by default, force API timeout to numeric
-    try:
-        api_timeout = float(container.config.api_timeout())
-    except (TypeError, ValueError) as e:
-        raise ValueError(
-            "API_TIMEOUT must be a float. Value provided: "
-            + str(container.config.api_timeout())
-        ) from e
+    api_timeout = check_numeric_env_variables(
+        float, container.config.api_timeout(), "API_TIMEOUT"
+    )
     container.config.api_timeout.from_value(api_timeout)
+    api_parallel_calls = check_numeric_env_variables(
+        int, container.config.api_parallel_calls(), "API_PARALLEL_CALLS"
+    )
+    container.config.api_parallel_calls.from_value(api_parallel_calls)
 
     # check values
     root_dir = Path(container.config.root_dir())

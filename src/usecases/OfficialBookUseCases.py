@@ -4,7 +4,7 @@ from typing import Literal
 from bs4 import BeautifulSoup
 
 from domain import Book
-from ports import HttpClientBase
+from ports import BookRepositoryInterface, HttpClientBase
 from usecases.BookUseCasesInterface import BookUseCasesInterface
 from usecases.OfficialBookDetails import OfficialBookDetails
 
@@ -13,6 +13,15 @@ class OfficialBookUseCases(BookUseCasesInterface):
     """Use cases for managing books."""
 
     _url_base: str = "https://www.gallimard-jeunesse.fr"
+
+    def __init__(
+        self,
+        repository: BookRepositoryInterface,
+        client: HttpClientBase,
+        parallel_calls: int = 5,
+    ):
+        super().__init__(repository, client)
+        self._parallel_calls = parallel_calls
 
     async def fetch_books(self, client: HttpClientBase | None = None) -> list[Book]:
         results: list[Book] = []
@@ -23,8 +32,11 @@ class OfficialBookUseCases(BookUseCasesInterface):
             urls = await self._fetch_book_urls(client_instance)
 
             self._logger.info(f"Fetching book details for {len(urls)} URLs")
-            tasks = [self.fetch_book(url, client_instance) for url in urls]
-            results = [book for book in await asyncio.gather(*tasks) if book]
+            results: list[Book] = []
+            for i in range(0, len(urls), self._parallel_calls):
+                selected_urls = urls[i : i + self._parallel_calls]
+                tasks = [self.fetch_book(url, client_instance) for url in selected_urls]
+                results.extend([book for book in await asyncio.gather(*tasks) if book])
 
         return results
 

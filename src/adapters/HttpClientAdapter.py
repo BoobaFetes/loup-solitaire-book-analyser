@@ -76,6 +76,15 @@ class HttpClientAdapter(HttpClientBase[TResponse, TData]):
                 exc_info=True,
             )
             raise
+        except httpx.ReadError as e:
+            if retry > 0:
+                return await self._retry(endpoint, retry - 1)
+
+            self.__logger.critical(
+                f"Read error for {response.url}: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
+            raise
         except httpx.HTTPStatusError as e:
             self.__logger.critical(
                 f"Bad request HTTP status code {e.response.status_code} for {e.request.url}: {e.response.text} - {type(e).__name__}: {e}",

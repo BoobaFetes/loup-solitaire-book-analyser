@@ -55,7 +55,7 @@ class Book(BaseModel):
         return self
 
     def __str__(self) -> str:
-        return f"[ISBN: {self.isbn:>13}] [image: {'true' if self.image else 'false':<5}] {self.numero:>3}. {self.titre:<40} ({self.url:<120}) [parution date: {self.lastParutionDate}] [authors: {', '.join(self.authors)}]"
+        return f"[ISBN: {self.isbn:>13}] [image: {'true' if self.image else 'false':<5}] {self.numero:>3}. {self.titre:<40} ({self.url:<100}) [parution date: {self.lastParutionDate}] [authors: {', '.join(self.authors)}]"
 
     def add_price(self, price: BookPrice):
         """Adds a price to the book's list of prices.

@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 
 from domain import Book
 from ioc import new_ioc_container, print_environment_variables
@@ -36,12 +35,11 @@ async def main():
     # pour l'hebergement on pensera donc à un volume pour l'instant sachant qu'il faudra trouver un chart helm pour la base de donnée qui reste à choisir => postgresql, tinydb, etc
     # raise NotImplementedError("Parsing logic not implemented yet")
 
-    if os.getenv("ENV", "dev") == "dev":
-        logger.info("")
-        logger.info("list of books fetched:")
-        sorted_book = sorted(books, key=lambda b: b.numero)
-        for book in sorted_book:
-            logger.info(f" - {book}")
+    logger.info("")
+    logger.info("list of books fetched:")
+    sorted_book = sorted(books, key=lambda b: b.numero)
+    for book in sorted_book:
+        logger.info(f" - {book}")
 
 
 asyncio.run(main())
