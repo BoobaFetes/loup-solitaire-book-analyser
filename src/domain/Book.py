@@ -37,11 +37,11 @@ class Book(BaseModel):
     numero: int
     titre: str
     authors: list[str] = Field(default_factory=lambda: [])
-    lastParutionDate: str  # iso format date string, e.g. "2022-06-16"
-    description: str
-    official: bool
+    lastParutionDate: str = Field(default_factory=lambda: "1900-01-01")
+    description: str = Field(default_factory=lambda: "")
+    official: bool = Field(default_factory=lambda: False)
     prices: list[BookPrice] = Field(default_factory=lambda: [])
-    image: str
+    image: str = Field(default_factory=lambda: "")
 
     @model_validator(mode="after")
     def set_id_from_numero(self) -> "Book":

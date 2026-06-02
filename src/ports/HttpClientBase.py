@@ -8,10 +8,10 @@ class HttpClientBase(Generic[TResponse, TData]):
     # region HTTP client lifecycle methods
 
     async def open(self, **kwargs) -> None:
-        raise NotImplementedError("open_async method not implemented")
+        raise NotImplementedError("open method not implemented")
 
     async def close(self) -> None:
-        raise NotImplementedError("close_async method not implemented")
+        raise NotImplementedError("close method not implemented")
 
     # endregion
 
