@@ -53,33 +53,46 @@ class HttpClientAdapter(HttpClientBase[TResponse, TData]):
             response.raise_for_status()
             return response
         except RuntimeError as e:
-            self.__logger.critical(f"Runtime error occurs for {endpoint}: {e}")
+            self.__logger.critical(
+                f"Runtime error occurs for {endpoint}: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
             raise
         except httpx.ConnectTimeout as e:
             if retry > 0:
                 return await self._retry(endpoint, retry - 1)
 
-            self.__logger.critical(f"Connection timeout for {response.url}: {e}")
+            self.__logger.critical(
+                f"Connection timeout for {response.url}: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
             raise
         except httpx.ConnectError as e:
             if retry > 0:
                 return await self._retry(endpoint, retry - 1)
 
-            self.__logger.critical(f"Connection error for {response.url}: {e}")
+            self.__logger.critical(
+                f"Connection error for {response.url}: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
             raise
         except httpx.HTTPStatusError as e:
             self.__logger.critical(
-                "Bad request HTTP status code %d for %s: %s",
-                e.response.status_code,
-                e.request.url,
-                e.response.text,
+                f"Bad request HTTP status code {e.response.status_code} for {e.request.url}: {e.response.text} - {type(e).__name__}: {e}",
+                exc_info=True,
             )
             raise
         except httpx.RequestError as e:
-            self.__logger.critical(f"Request error for {e.request.url}: {e}")
+            self.__logger.critical(
+                f"Request error for {e.request.url}: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
             raise
         except Exception as e:
-            self.__logger.critical(f"Unexpected error for {response.url}: {e}")
+            self.__logger.critical(
+                f"Unexpected error for {response.url}: {type(e).__name__}: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
             raise
 
     async def _retry(self, endpoint: str, retry: int) -> httpx.Response:

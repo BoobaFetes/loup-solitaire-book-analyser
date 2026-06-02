@@ -51,7 +51,7 @@ class BookFileRepository(BookRepositoryInterface):
         Returns:
             dict[str, Book]: Un dictionnaire de books extraits.
         """
-        content = self._fs.read_file(self._connection_string, withLog=False)
+        content = self._fs.read_file(self._connection_string)
         data: dict[str, Any] = json_loads(content)
 
         results = {key: Book(**item) for key, item in data.items()}
@@ -67,9 +67,7 @@ class BookFileRepository(BookRepositoryInterface):
             books (dict[str, Book]): Un dictionnaire de books à persister.
         """
         data = {key: book.model_dump(mode="json") for key, book in books.items()}
-        self._fs.write_file(
-            self._connection_string, json_dumps(data, indent=2), withLog=False
-        )
+        self._fs.write_file(self._connection_string, json_dumps(data, indent=2))
         self._logger.info(
             f"Persisted books to file system at {self._connection_string} : {len(books) + 1} items",
         )
@@ -89,7 +87,9 @@ class BookFileRepository(BookRepositoryInterface):
             )
             return True
         except Exception as e:
-            self._logger.error(f"Error clearing books: {e}")
+            self._logger.error(
+                f"Error clearing books: {type(e).__name__}: {e}", exc_info=True
+            )
         return False
 
     def list(self) -> List[Book]:
@@ -105,7 +105,9 @@ class BookFileRepository(BookRepositoryInterface):
             )
             return list(data.values())
         except Exception as e:
-            self._logger.error(f"Error listing books: {e}")
+            self._logger.error(
+                f"Error listing books: {type(e).__name__}: {e}", exc_info=True
+            )
         return []
 
     def add_many(self, books: List[Book]) -> int:
@@ -129,7 +131,9 @@ class BookFileRepository(BookRepositoryInterface):
             )
             return count
         except Exception as e:
-            self._logger.error(f"Error adding books: {e}")
+            self._logger.error(
+                f"Error adding books: {type(e).__name__}: {e}", exc_info=True
+            )
 
         return 0
 
@@ -151,7 +155,10 @@ class BookFileRepository(BookRepositoryInterface):
             )
             return True
         except Exception as e:
-            self._logger.error(f"Error adding book {book.numero}: {e}")
+            self._logger.error(
+                f"Error adding book {book.numero}: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
         return False
 
     def get(self, id: int) -> Book:
@@ -193,7 +200,9 @@ class BookFileRepository(BookRepositoryInterface):
                     f"book id:{id} not found in file system at {self._connection_string}",
                 )
         except Exception as e:
-            self._logger.error(f"Error getting book {id}: {e}")
+            self._logger.error(
+                f"Error getting book {id}: {type(e).__name__}: {e}", exc_info=True
+            )
         return None
 
     def update(self, book: Book) -> bool:
@@ -219,7 +228,10 @@ class BookFileRepository(BookRepositoryInterface):
                     f"book {book.numero} not found in file system at {self._connection_string}",
                 )
         except Exception as e:
-            self._logger.error(f"Error updating book {book.numero}: {e}")
+            self._logger.error(
+                f"Error updating book {book.numero}: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
         return False
 
     def delete(self, numero: int) -> bool:
@@ -245,5 +257,8 @@ class BookFileRepository(BookRepositoryInterface):
                     f"book {numero} not found in file system at {self._connection_string}",
                 )
         except Exception as e:
-            self._logger.error(f"Error removing book {numero}: {e}")
+            self._logger.error(
+                f"Error removing book {numero}: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
         return False

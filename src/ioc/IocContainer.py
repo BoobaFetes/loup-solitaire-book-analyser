@@ -37,7 +37,8 @@ class IocContainer(containers.DeclarativeContainer):
     logging = providers.Resource(
         basicConfig,
         level=config.log_level,
-        format="[%(levelname)s] [%(name)s] [task=%(taskName)s] %(asctime)s - %(message)s",
+        format="{asctime} [ {levelname:^8} ] [{taskName!s:^8}] [{name:^24}] {message}",
+        style="{",
         handlers=providers.Factory(
             _make_logging_handlers,
             root_dir=config.root_dir,
@@ -102,6 +103,16 @@ def new_ioc_container() -> IocContainer:
     container.config.connection_string.from_env("CONNECTION_STRING", required=True)
     container.config.log_level.from_env("LOG_LEVEL", default="INFO")
     container.config.log_file.from_env("LOG_FILE", required=True)
+
+    # environment variables are strings by default, force API timeout to numeric
+    try:
+        api_timeout = float(container.config.api_timeout())
+    except (TypeError, ValueError) as e:
+        raise ValueError(
+            "API_TIMEOUT must be a float. Value provided: "
+            + str(container.config.api_timeout())
+        ) from e
+    container.config.api_timeout.from_value(api_timeout)
 
     # check values
     root_dir = Path(container.config.root_dir())

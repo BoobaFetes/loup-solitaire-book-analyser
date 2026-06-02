@@ -37,6 +37,7 @@ class BookUseCases(BookUseCasesInterface):
         # Fusionne les deux listes sans doublons (basé sur Book.id)
         books_set |= non_official_books_set
         books: list[Book] = list(books_set)
+
         # tri par id de livre (on s'attend à id==numero) pour simplifier la lecture et la maintenance
         books.sort(key=lambda b: b.id)
 

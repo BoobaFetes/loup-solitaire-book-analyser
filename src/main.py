@@ -38,6 +38,7 @@ async def main():
 
     if os.getenv("ENV", "dev") == "dev":
         logger.info("")
+        logger.info("list of books fetched:")
         sorted_book = sorted(books, key=lambda b: b.numero)
         for book in sorted_book:
             logger.info(f" - {book}")
