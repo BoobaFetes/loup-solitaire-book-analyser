@@ -69,7 +69,7 @@ class BookFileRepository(BookRepositoryInterface):
         data = {key: book.model_dump(mode="json") for key, book in books.items()}
         self._fs.write_file(self._connection_string, json_dumps(data, indent=2))
         self._logger.info(
-            f"Persisted books to file system at {self._connection_string} : {len(books) + 1} items",
+            f"Persisted books to file system at {self._connection_string} : {len(books)} items",
         )
 
     # endregion
