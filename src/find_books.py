@@ -4,22 +4,22 @@ import logging
 from domain import Book
 from ioc import new_ioc_container, print_environment_variables
 
-# load dependencies
-container = new_ioc_container()
 
-logger = logging.getLogger(__name__)
-logger.info("IOC container initialized")
-
-print_environment_variables(container, logger)
-
-logger.info("IOC : common instances (singleton) created")
-
-# arrange
-book_usecases = container.book_usecases()
-
-
-# action
 async def main():
+    # load dependencies
+    container = new_ioc_container()
+
+    logger = logging.getLogger(__name__)
+    logger.info("IOC container initialized")
+
+    print_environment_variables(container, logger)
+
+    logger.info("IOC : common instances (singleton) created")
+
+    # arrange
+    book_usecases = container.book_usecases()
+
+    # action
     books: list[Book] = await book_usecases.fetch_books()
 
     # pour le moment on fait kiss pour la persistance de données => direct dans un fichier json
@@ -32,4 +32,5 @@ async def main():
         logger.info(f" - {book}")
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
