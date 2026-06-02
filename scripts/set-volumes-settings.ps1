@@ -16,8 +16,8 @@ $commands = @(
     "mkdir -p /mnt/volumes/lsba/prod/data",
     "mkdir -p /mnt/volumes/lsba/prod/logs",
     
-    "ls -la /mnt/volumes/lsba"
-    "ls -la /mnt/volumes/lsba/dev"
+    "ls -la /mnt/volumes/lsba",
+    "ls -la /mnt/volumes/lsba/dev",
     "ls -la /mnt/volumes/lsba/prod"
 )
 
