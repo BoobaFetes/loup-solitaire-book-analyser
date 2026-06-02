@@ -1,7 +1,8 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: loup-solitaire-book-analyser-job
+  name: lsba-find-books-job
+  namespace: lsba-ns # patched by overlay
 spec:
   template:
     metadata: {}
@@ -9,13 +10,51 @@ spec:
       volumes:
         - name: project-volume
           persistentVolumeClaim:
-            claimName: loup-solitaire-book-analyser-pvc
+            claimName: lsba-pvc
       containers:
-        - image: loup-solitaire-book-analyser:v1.0.4
-          name: loup-solitaire-book-analyser-pod
+        - image: loup-solitaire-book-analyser:v0.1.0
+          name: lsba-find-books
+          args: ["src/find_books.py"]
           envFrom:
             - configMapRef:
-                name: loup-solitaire-book-analyser-cm
+                name: lsba-cm # patched by overlay
+                optional: false
+          volumeMounts:
+            - name: project-volume
+              mountPath: /app/data
+              subPath: data
+            - name: project-volume
+              mountPath: /app/logs
+              subPath: logs
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+      restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: lsba-find-prices-job
+  namespace: lsba-ns # patched by overlay
+spec:
+  template:
+    metadata: {}
+    spec:
+      volumes:
+        - name: project-volume
+          persistentVolumeClaim:
+            claimName: lsba-pvc # patched by overlay
+      containers:
+        - image: loup-solitaire-book-analyser:v0.1.0
+          name: lsba-find-prices
+          args: ["src/find_prices.py"]
+          envFrom:
+            - configMapRef:
+                name: lsba-cm # patched by overlay
                 optional: false
           volumeMounts:
             - name: project-volume

@@ -1,34 +1,33 @@
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: loup-solitaire-book-analyser-sc # NE PAS préfixer via namePrefix
+  name: lsba-sc # patched by overlay
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer # recommandé pour no-provisioner
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: loup-solitaire-book-analyser-pv # sera préfixé par namePrefix (dev-/prod-)
+  name: lsba-pv # patched by overlay
 spec:
-  storageClassName: loup-solitaire-book-analyser-sc # doit matcher la SC non-préfixée
+  storageClassName: lsba-sc # patched by overlay
   accessModes:
     - ReadWriteOnce
   capacity:
     storage: 1Mi
   hostPath:
-    path: /mnt/volumes/loup-solitaire-book-analyser
-  # claimRef sera patché par chaque overlay pour cibler le bon namespace
-  claimRef:
-    name: loup-solitaire-book-analyser-pvc # patché par overlay
-    namespace: loup-solitaire-book-analyser-dev # patché par overlay
+    path: /mnt/volumes/lsba/dev
+  claimRef: # patched by overlay
+    name: lsba-pvc # patched by overlay
+    namespace: lsba-ns # patched by overlay
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: loup-solitaire-book-analyser-pvc
-  # namespace injecté automatiquement par kustomize overlay
+  name: lsba-pvc # patched by overlay
+  namespace: lsba-ns # patched by overlay
 spec:
-  storageClassName: loup-solitaire-book-analyser-sc # doit matcher la SC non-préfixée
+  storageClassName: lsba-sc # patched by overlay
   accessModes:
     - ReadWriteOnce
   resources:

@@ -1,12 +1,14 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: loup-solitaire-book-analyser-cronjob
+  name: lsba-find-books-cronjob
+  namespace: lsba-ns # patched by overlay
 spec:
-  schedule: "0 0 * * *"
+  # attention au temps prix sur ce job !! find_prices dépend du meme PVC !
+  schedule: "0 0 1 * *" # tous les 1er du mois à minuit (soit 10 min avant find_prices pour éviter les conflits sur le PVC)
   jobTemplate:
     metadata:
-      name: loup-solitaire-book-analyser-job
+      name: lsba-find-books-job
     spec:
       template:
         metadata: {}
@@ -14,13 +16,56 @@ spec:
           volumes:
             - name: project-volume
               persistentVolumeClaim:
-                claimName: loup-solitaire-book-analyser-pvc
+                claimName: lsba-pvc # patched by overlay
           containers:
-            - image: loup-solitaire-book-analyser:v1.0.4
-              name: loup-solitaire-book-analyser-pod
+            - image: loup-solitaire-book-analyser:v0.1.0
+              name: lsba-find-books
+              args: ["src/find_books.py"]
               envFrom:
                 - configMapRef:
-                    name: loup-solitaire-book-analyser-cm
+                    name: lsba-cm # patched by overlay
+                    optional: false
+              volumeMounts:
+                - name: project-volume
+                  mountPath: /app/data
+                  subPath: data
+                - name: project-volume
+                  mountPath: /app/logs
+                  subPath: logs
+              resources:
+                limits:
+                  memory: "128Mi"
+                  cpu: "100m"
+                requests:
+                  memory: "64Mi"
+                  cpu: "50m"
+          restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: lsba-find-prices-cronjob
+  namespace: lsba-ns # patched by overlay
+spec:
+  schedule: "10 0 * * *" # chaque jour à 00:10
+  jobTemplate:
+    metadata:
+      name: lsba-find-prices-job
+    spec:
+      template:
+        metadata: {}
+        spec:
+          volumes:
+            - name: project-volume
+              persistentVolumeClaim:
+                claimName: lsba-pvc # patched by overlay
+          containers:
+            - image: loup-solitaire-book-analyser:v0.1.0
+              name: lsba-find-prices
+              args: ["src/find_prices.py"]
+              envFrom:
+                - configMapRef:
+                    name: lsba-cm # patched by overlay
                     optional: false
               volumeMounts:
                 - name: project-volume
