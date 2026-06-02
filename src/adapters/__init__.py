@@ -1,11 +1,9 @@
 from adapters.BookFileRepository import BookFileRepository
-from adapters.FetcherAdapter import FetcherAdapter
 from adapters.FileSystemAdapter import FileSystemAdapter
-from adapters.LoggerAdapter import LoggerAdapter
+from adapters.HttpClientAdapter import HttpClientAdapter
 
 __all__ = [
     "BookFileRepository",
-    "LoggerAdapter",
     "FileSystemAdapter",
-    "FetcherAdapter",
+    "HttpClientAdapter",
 ]

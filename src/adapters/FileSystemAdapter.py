@@ -1,6 +1,7 @@
+import logging
 from pathlib import Path
 
-from ports import FileSystemInterface, LoggerInterface
+from ports import FileSystemInterface
 
 
 class FileSystemAdapter(FileSystemInterface):
@@ -10,8 +11,8 @@ class FileSystemAdapter(FileSystemInterface):
         FileSystemInterface: L'interface du système de fichiers.
     """
 
-    def __init__(self, logger: LoggerInterface, path: str):
-        self._logger: LoggerInterface = logger
+    def __init__(self, path: str):
+        self._logger = logging.getLogger(self.__class__.__name__)
         self._path: Path = Path(path)
 
     def is_file_exists(self, name: str) -> bool:
@@ -42,11 +43,11 @@ class FileSystemAdapter(FileSystemInterface):
                     file.unlink()
                 self._logger.info(
                     f"Cleared files matching '{pattern}' in directory: {self._path}",
-                    self.__class__.__name__,
                 )
         except Exception as e:
             self._logger.critical(
-                f"Error clearing directory {self._path}: {e}", self.__class__.__name__
+                f"Error clearing directory {self._path}: {type(e).__name__}: {e}",
+                exc_info=True,
             )
             raise
 
@@ -58,12 +59,11 @@ class FileSystemAdapter(FileSystemInterface):
         """
         return [str(file.name) for file in self._path.glob("*.html") if file.is_file()]
 
-    def read_file(self, name: str, withLog: bool = True) -> str:
+    def read_file(self, name: str) -> str:
         """Read the contents of a file.
 
         Args:
             name (str): The name of the file to read.
-            withLog (bool, optional): Whether to log the read operation. Defaults to True.
 
 
         Raises:
@@ -74,34 +74,28 @@ class FileSystemAdapter(FileSystemInterface):
             str: The contents of the file.
         """
         try:
-            if withLog:
-                self._logger.info(
-                    f"Reading file from path: {name}", self.__class__.__name__
-                )
-
             with open(Path(self._path / name), "r", encoding="utf-8") as f:
                 content = f.read()
             return content
         except FileNotFoundError as e:
             self._logger.critical(
-                f"File not found: {Path(self._path / name)}: {e}",
-                self.__class__.__name__,
+                f"File not found: {Path(self._path / name)}: {type(e).__name__}: {e}",
+                exc_info=True,
             )
             raise
         except IOError as e:
             self._logger.critical(
-                f"Error reading file {Path(self._path / name)}: {e}",
-                self.__class__.__name__,
+                f"Error reading file {Path(self._path / name)}: {type(e).__name__}: {e}",
+                exc_info=True,
             )
             raise
 
-    def write_file(self, name: str, content: str, withLog: bool = True) -> None:
+    def write_file(self, name: str, content: str) -> None:
         """Write the contents to a file.
 
         Args:
             name (str): The name of the file to write.
             content (str): The contents to write to the file.
-            withLog (bool, optional): Whether to log the write operation. Defaults to True.
 
         Raises:
             ValueError: If the file path is invalid.
@@ -111,11 +105,6 @@ class FileSystemAdapter(FileSystemInterface):
         """
         current_path: Path = Path(self._path / name)
         try:
-            if withLog:
-                self._logger.info(
-                    f"Writing file to path: {name}", self.__class__.__name__
-                )
-
             # check arguments
             if current_path.suffix == "":
                 self._logger.error(
@@ -133,16 +122,19 @@ class FileSystemAdapter(FileSystemInterface):
                 f.write(content)
         except FileNotFoundError as e:
             self._logger.critical(
-                f"File not found: {current_path}: {e}", self.__class__.__name__
+                f"File not found: {current_path}: {type(e).__name__}: {e}",
+                exc_info=True,
             )
             raise
         except IOError as e:
             self._logger.critical(
-                f"Error reading file {current_path}: {e}", self.__class__.__name__
+                f"Error writing file {current_path}: {type(e).__name__}: {e}",
+                exc_info=True,
             )
             raise
         except Exception as e:
             self._logger.critical(
-                f"Error saving file {current_path}: {e}", self.__class__.__name__
+                f"Error saving file {current_path}: {type(e).__name__}: {e}",
+                exc_info=True,
             )
             raise

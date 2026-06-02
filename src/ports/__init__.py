@@ -1,11 +1,9 @@
 from ports.BookRepositoryInterface import BookRepositoryInterface
-from ports.FetcherInterface import FetcherInterface
 from ports.FileSystemInterface import FileSystemInterface
-from ports.LoggerInterface import LoggerInterface
+from ports.HttpClientBase import HttpClientBase
 
 __all__ = [
     "BookRepositoryInterface",
-    "LoggerInterface",
     "FileSystemInterface",
-    "FetcherInterface",
+    "HttpClientBase",
 ]

@@ -37,6 +37,7 @@ class Book(BaseModel):
     numero: int
     titre: str
     authors: list[str] = Field(default_factory=lambda: [])
+    lastParutionDate: str  # iso format date string, e.g. "2022-06-16"
     description: str
     official: bool
     prices: list[BookPrice] = Field(default_factory=lambda: [])
@@ -54,9 +55,7 @@ class Book(BaseModel):
         return self
 
     def __str__(self) -> str:
-        return (
-            f"[ISBN: {self.isbn:>13}] {self.numero:>3}. {self.titre:<30} ({self.url})"
-        )
+        return f"[ISBN: {self.isbn:>13}] [image: {'true' if self.image else 'false':<5}] {self.numero:>3}. {self.titre:<40} ({self.url:<100}) [parution date: {self.lastParutionDate}] [authors: {', '.join(self.authors)}]"
 
     def add_price(self, price: BookPrice):
         """Adds a price to the book's list of prices.

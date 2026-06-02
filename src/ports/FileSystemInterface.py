@@ -34,10 +34,10 @@ class FileSystemInterface:
         """
         raise NotImplementedError
 
-    def read_file(self, name: str, withLog: bool = True) -> str:
+    def read_file(self, name: str) -> str:
         raise NotImplementedError
 
-    def write_file(self, name: str, content: str, withLog: bool = True) -> None:
+    def write_file(self, name: str, content: str) -> None:
         """Write content to a file.
 
         Args:

@@ -1,59 +1,21 @@
 import asyncio
-import os
-from pathlib import Path
+import logging
 
-from dotenv import load_dotenv
-
-from adapters import (
-    BookFileRepository,
-    FileSystemAdapter,
-    LoggerAdapter,
-)
 from domain import Book
-from usecases import BookUseCases
+from ioc import new_ioc_container, print_environment_variables
 
-SCRIPT_ROOT_DIR = Path(__file__).parent
+# load dependencies
+container = new_ioc_container()
 
-# arrange
-_env = os.getenv("ENV", "dev")
-if _env == "dev":
-    # charge les variables du fichier .env si le fichier est présent sinon récupération depuis les variable d'environnement
-    load_dotenv()
+logger = logging.getLogger(__name__)
+logger.info("IOC container initialized")
 
+print_environment_variables(container, logger)
 
-env: dict[str, str] = {
-    "CONNECTION_STRING": os.getenv("CONNECTION_STRING", ""),
-    "ENV": _env,
-    "LOG_FILE": os.getenv("LOG_FILE", ""),
-    "LOG_LEVEL": os.getenv("LOG_LEVEL", "WARN"),
-}
-env["FILE_SYSTEM_PATH"] = os.getenv(
-    "FILE_SYSTEM_PATH",
-    str(SCRIPT_ROOT_DIR / "data")
-    if env["ENV"] != "dev"
-    else str(SCRIPT_ROOT_DIR.parent / "data"),
-)
-
-logger = LoggerAdapter(log_file=env["LOG_FILE"], log_level=env["LOG_LEVEL"])
-
-logger.info("environment variables:", "INIT")
-for key, value in env.items():
-    logger.info(f" - {key} = {value}", "INIT")
-
-# IOC simulation
-# on instancie les adaptateurs (implémentations concrètes) et on les injecte dans les usecases.
-# Les usecases ne connaissent que les interfaces (abstractions) et restent découplés des implémentations concrètes.
-fs = FileSystemAdapter(logger, path=env["FILE_SYSTEM_PATH"])
-book_repository = BookFileRepository(
-    logger,
-    fs,
-    connection_string=env["CONNECTION_STRING"],
-)
-logger.debug("IOC : common instances (singleton) created", "INIT")
+logger.info("IOC : common instances (singleton) created")
 
 # arrange
-book_usecases = BookUseCases(book_repository, logger)
-logger.debug("usecases created", "INIT")
+book_usecases = container.book_usecases()
 
 
 # action
@@ -73,14 +35,11 @@ async def main():
     # pour l'hebergement on pensera donc à un volume pour l'instant sachant qu'il faudra trouver un chart helm pour la base de donnée qui reste à choisir => postgresql, tinydb, etc
     # raise NotImplementedError("Parsing logic not implemented yet")
 
-    if env["ENV"] == "dev":
-        logger.info("")
-        sorted_book = sorted(books, key=lambda b: b.numero)
-        for book in sorted_book:
-            logger.info(
-                f" - {book}",
-                "DEV ONLY",
-            )
+    logger.info("")
+    logger.info("list of books fetched:")
+    sorted_book = sorted(books, key=lambda b: b.numero)
+    for book in sorted_book:
+        logger.info(f" - {book}")
 
 
 asyncio.run(main())
