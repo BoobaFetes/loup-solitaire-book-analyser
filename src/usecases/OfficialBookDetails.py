@@ -17,17 +17,17 @@ class OfficialBookDetails:
         self._soup = soup
 
     def authors(self) -> list[str]:
-        elements = self._soup.select("div.Book-contributors > p > a")
+        elements = self._soup.select("div.Book-contributors > p:first-child > a")
         if not elements:
             self._logger.error("No potential author information found in the page.")
             return []
 
-        result: list[str] = []
+        results: list[str] = []
         for author in [element.get_text(strip=False) for element in elements]:
             parts = [part.strip() if part else "" for part in author.split("\n")]
-            result.append(" ".join(parts))
+            results.append(" ".join(parts))
 
-        return result
+        return results
 
     def last_parution_date(self, default_value: str) -> str:
         element = self._soup.select_one("li.Book-detailsSet > p:nth-child(3) > strong")

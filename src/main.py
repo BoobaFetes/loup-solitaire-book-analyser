@@ -36,7 +36,7 @@ async def main():
     # raise NotImplementedError("Parsing logic not implemented yet")
 
     logger.info("")
-    logger.info("list of books fetched:")
+    logger.info("summary:")
     sorted_book = sorted(books, key=lambda b: b.numero)
     for book in sorted_book:
         logger.info(f" - {book}")
