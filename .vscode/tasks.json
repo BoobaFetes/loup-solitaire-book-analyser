@@ -3,10 +3,24 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "check typings",
+      "label": "check typings: find_books.py",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/Scripts/pyright.exe",
-      "args": ["${workspaceFolder}/src/main.py"],
+      "args": ["${workspaceFolder}/src/find_books.py"],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "check typings: find_prices.py",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/pyright.exe",
+      "args": ["${workspaceFolder}/src/find_prices.py"],
       "group": {
         "kind": "test",
         "isDefault": true

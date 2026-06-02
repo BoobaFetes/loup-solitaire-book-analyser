@@ -2,13 +2,24 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "launch main",
+      "name": "launch find_books.py",
       "type": "debugpy",
       "request": "launch",
       "python": "${workspaceFolder}/.venv/Scripts/python.exe",
-      "program": "${workspaceFolder}/src/main.py",
+      "program": "${workspaceFolder}/src/find_books.py",
       "console": "integratedTerminal",
-      "preLaunchTask": "check typings",
+      "preLaunchTask": "check typings: find_books.py",
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "launch find_prices.py",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "program": "${workspaceFolder}/src/find_prices.py",
+      "console": "integratedTerminal",
+      "preLaunchTask": "check typings: find_prices.py",
       "justMyCode": true,
       "envFile": "${workspaceFolder}/.env"
     },

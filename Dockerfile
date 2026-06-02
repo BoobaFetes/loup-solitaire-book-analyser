@@ -10,4 +10,5 @@ COPY ./src ./src
 ENV ENV="prod"
 ENV LOG_LEVEL="INFO"
 
-ENTRYPOINT ["python", "src/main.py"]
+ENTRYPOINT ["python"]
+CMD ["src/main.py"]
