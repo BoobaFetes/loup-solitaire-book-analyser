@@ -1,15 +1,15 @@
 import asyncio
+import logging
 from typing import Literal
 
 from bs4 import BeautifulSoup
 
 from domain import Book
 from ports import BookRepositoryInterface, HttpClientBase
-from usecases.BookUseCasesInterface import BookUseCasesInterface
-from usecases.OfficialBookDetails import OfficialBookDetails
+from usecases.book_list.OfficialBookDetails import OfficialBookDetails
 
 
-class OfficialBookUseCases(BookUseCasesInterface):
+class OfficialBookUseCases:
     """Use cases for managing books."""
 
     _url_base: str = "https://www.gallimard-jeunesse.fr"
@@ -20,7 +20,9 @@ class OfficialBookUseCases(BookUseCasesInterface):
         client: HttpClientBase,
         parallel_calls: int = 5,
     ):
-        super().__init__(repository, client)
+        self._repository = repository
+        self._client = client
+        self._logger = logging.getLogger(self.__class__.__name__)
         self._parallel_calls = parallel_calls
 
     async def fetch_books(self, client: HttpClientBase | None = None) -> list[Book]:
@@ -53,6 +55,11 @@ class OfficialBookUseCases(BookUseCasesInterface):
         while segment:
             # fetch page content
             json = await client.get_json(_build_full_url(segment))
+            if not json:
+                self._logger.warning(
+                    f"No JSON content retrieved for book URL {_build_full_url(segment)}"
+                )
+                return []
 
             # parse HTML content to find book detail links
             html = json.get("html", "")
@@ -91,6 +98,10 @@ class OfficialBookUseCases(BookUseCasesInterface):
             )
             active_client = client or self._client
             html = await active_client.get_text(url)
+            if not html:
+                self._logger.warning(f"No HTML content retrieved for book URL {url}")
+                return None
+
             soup = BeautifulSoup(html, "html.parser")
 
             details = OfficialBookDetails(soup)

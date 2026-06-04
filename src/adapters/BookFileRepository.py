@@ -93,10 +93,13 @@ class BookFileRepository(BookRepositoryInterface):
         return False
 
     def list(self) -> List[Book]:
-        """Liste tous les books.
+        """Retourner la liste de tous les books.
+
+        Raises:
+            Exception: Si une erreur se produit lors de la récupération des books.
 
         Returns:
-            List[Book]: Une liste de tous les books.
+            List[Book]: La liste de tous les books.
         """
         try:
             data: dict[str, Book] = self.__extract()
@@ -111,10 +114,13 @@ class BookFileRepository(BookRepositoryInterface):
         return []
 
     def add_many(self, books: List[Book]) -> int:
-        """Ajoute plusieurs books au dépôt.
+        """Ajouter plusieurs books au dépôt.
 
         Args:
             books (List[Book]): La liste des books à ajouter.
+
+        Raises:
+            Exception: Si une erreur se produit lors de l'ajout des books.
 
         Returns:
             int: Le nombre de books ajoutés.
@@ -143,6 +149,9 @@ class BookFileRepository(BookRepositoryInterface):
         Args:
             book (Book): Le book à ajouter.
 
+        Raises:
+            Exception: Si une erreur se produit lors de l'ajout du book.
+
         Returns:
             bool: True si le book a été ajouté avec succès, False sinon.
         """
@@ -162,16 +171,16 @@ class BookFileRepository(BookRepositoryInterface):
         return False
 
     def get(self, id: int) -> Book:
-        """Récupère un book par son numéro.
+        """Récupère un book par son identifiant unique.
 
         Args:
-            id (int): L'identifiant du book à récupérer.
+            id (int): L'identifiant unique du book à récupérer.
 
         Raises:
             ValueError: Si le book n'est pas trouvé.
 
         Returns:
-            Book: Le book correspondant au numéro.
+            Book: Le book correspondant à l'identifiant.
         """
         data = self.find(id)
         if not data:
@@ -179,37 +188,66 @@ class BookFileRepository(BookRepositoryInterface):
         return data
 
     def find(self, id: int) -> Book | None:
-        """Récupère un book par son numéro.
+        """Trouver un book par son identifiant unique.
 
         Args:
-            id (int): L'identifiant du book à récupérer.
+            id (int): L'identifiant unique du book à trouver.
+
+        Raises:
+            Exception: Si une erreur se produit lors de la recherche du book.
 
         Returns:
-            Book | None: Le book correspondant au numéro ou None s'il n'est pas trouvé.
+            Book | None: Le book correspondant à l'identifiant, ou None s'il n'existe pas.
         """
         try:
             data: dict[str, Book] = self.__extract()
-            item = data.get(str(id), None)
-            if item is not None:
-                self._logger.info(
-                    f"Got book {item.id} from file system at {self._connection_string}",
-                )
-                return item
-            else:
-                self._logger.info(
-                    f"book id:{id} not found in file system at {self._connection_string}",
-                )
+            return data.get(str(id), None)
         except Exception as e:
             self._logger.error(
                 f"Error getting book {id}: {type(e).__name__}: {e}", exc_info=True
             )
         return None
 
+    def update_many(self, books: List[Book]) -> int:
+        """Mettre à jour plusieurs books dans le dépôt.
+
+        Args:
+            books (List[Book]): La liste des books à mettre à jour.
+
+        Raises:
+            Exception: Si une erreur se produit lors de la mise à jour des books.
+
+        Returns:
+            int: Le nombre de books mis à jour.
+        """
+        try:
+            data: dict[str, Book] = self.__extract()
+            ids = [book.id for book in books]
+            count = 0
+            for book in books:
+                if book.id not in ids:
+                    continue
+
+                data[str(book.numero)] = book
+                count += 1
+
+            self.__persist(data)
+            return count
+        except Exception as e:
+            self._logger.error(
+                f"Error updating books: {type(e).__name__}: {e}", exc_info=True
+            )
+
+        return 0
+
     def update(self, book: Book) -> bool:
-        """Met à jour un book dans le dépôt.
+        """Mettre à jour un book existant dans le dépôt.
 
         Args:
             book (Book): Le book à mettre à jour.
+
+        Raises:
+            Exception: Si une erreur se produit lors de la mise à jour du book.
 
         Returns:
             bool: True si le book a été mis à jour avec succès, False sinon.
@@ -234,31 +272,62 @@ class BookFileRepository(BookRepositoryInterface):
             )
         return False
 
-    def delete(self, numero: int) -> bool:
-        """Supprime un book du dépôt.
+    def delete_many(self, ids: List[int]) -> int:
+        """Supprimer plusieurs books du dépôt par leurs identifiants uniques.
 
         Args:
-            numero (int): Le numéro du book à supprimer.
+            ids (List[int]): La liste des identifiants uniques des books à supprimer.
+
+        Raises:
+            Exception: Si une erreur se produit lors de la suppression des books.
+
+        Returns:
+            int: Le nombre de books supprimés.
+        """
+        try:
+            data: dict[str, Book] = self.__extract()
+            count = 0
+            for id in ids:
+                if str(id) in data:
+                    del data[str(id)]
+                    count += 1
+
+            self.__persist(data)
+            self._logger.info(
+                f"Removed {count} books from file system at {self._connection_string}",
+            )
+            return count
+        except Exception as e:
+            self._logger.error(
+                f"Error removing books [{', '.join(map(str, ids))}]: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
+        return 0
+
+    def delete(self, id: int) -> bool:
+        """Supprimer un book du dépôt par son identifiant unique.
+
+        Args:
+            id (int): L'identifiant unique du book à supprimer.
+
+        Raises:
+            Exception: Si une erreur se produit lors de la suppression du book.
 
         Returns:
             bool: True si le book a été supprimé avec succès, False sinon.
         """
         try:
             data: dict[str, Book] = self.__extract()
-            if str(numero) in data:
-                del data[str(numero)]
+            if str(id) in data:
+                del data[str(id)]
                 self.__persist(data)
                 self._logger.info(
-                    f"Removed book {numero} from file system at {self._connection_string}",
+                    f"Removed book {id} from file system at {self._connection_string}",
                 )
                 return True
-            else:
-                self._logger.warning(
-                    f"book {numero} not found in file system at {self._connection_string}",
-                )
         except Exception as e:
             self._logger.error(
-                f"Error removing book {numero}: {type(e).__name__}: {e}",
+                f"Error removing book {id}: {type(e).__name__}: {e}",
                 exc_info=True,
             )
         return False

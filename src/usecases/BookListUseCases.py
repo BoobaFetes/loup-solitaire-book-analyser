@@ -1,9 +1,11 @@
+import logging
+
 from domain import Book
 from ports import BookRepositoryInterface, HttpClientBase
-from usecases.BookUseCasesInterface import BookUseCasesInterface
+from usecases.book_list import NonOfficialBookUseCases, OfficialBookUseCases
 
 
-class BookUseCases(BookUseCasesInterface):
+class BookListUseCases:
     """Use cases for managing books."""
 
     _url_base: str = "https://www.gallimard-jeunesse.fr"
@@ -12,12 +14,14 @@ class BookUseCases(BookUseCasesInterface):
         self,
         repository: BookRepositoryInterface,
         client: HttpClientBase,
-        official_book: BookUseCasesInterface,
-        non_official_book: BookUseCasesInterface,
+        official_book: OfficialBookUseCases,
+        non_official_book: NonOfficialBookUseCases,
     ):
-        super().__init__(repository, client)
-        self._official_book: BookUseCasesInterface = official_book
-        self._non_official_book: BookUseCasesInterface = non_official_book
+        self._repository = repository
+        self._client = client
+        self._logger = logging.getLogger(self.__class__.__name__)
+        self._official_book: OfficialBookUseCases = official_book
+        self._non_official_book: NonOfficialBookUseCases = non_official_book
 
     async def fetch_books(self, client: HttpClientBase | None = None) -> list[Book]:
         books_sources: list[list[Book]] = []
@@ -49,6 +53,24 @@ class BookUseCases(BookUseCasesInterface):
             raise ValueError("Not all books were added to the repository.")
 
         return self._repository.list()
+
+    async def list(self) -> list[Book]:
+        return self._repository.list()
+
+    async def get(self, *, id: int, isbn: str) -> Book:
+        data = await self.find(id=id, isbn=isbn)
+        if not data:
+            raise ValueError(f"Book with id {id} or isbn {isbn} not found")
+        return data
+
+    async def find(self, *, id: int, isbn: str) -> Book | None:
+        data = self._repository.list()
+        if id:
+            data = [book for book in data if book.id == id]
+        elif isbn:
+            data = [book for book in data if book.isbn == isbn]
+
+        return None
 
     def get_total_and_average_by_currency(self) -> dict[str, tuple[float, float]]:
         self._logger.info("Calculating total and average prices")

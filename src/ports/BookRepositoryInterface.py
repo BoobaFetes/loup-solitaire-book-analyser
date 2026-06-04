@@ -60,30 +60,44 @@ class BookRepositoryInterface:
         raise NotImplementedError
 
     def get(self, id: int) -> Book:
-        """Récupérer un book par son numéro.
+        """Récupérer un book par son identifiant unique.
 
         Args:
-            numero (int): Le numéro du book à récupérer.
+            id (int): L'identifiant unique du book à récupérer.
 
         Raises:
             NotImplementedError: Si la méthode n'est pas implémentée.
 
         Returns:
-            Book: Le book correspondant au numéro.
+            Book: Le book correspondant à l'identifiant.
         """
         raise NotImplementedError
 
     def find(self, id: int) -> Book | None:
-        """Trouver un book par son numéro.
+        """Trouver un book par son identifiant unique.
 
         Args:
-            numero (int): Le numéro du book à trouver.
+            id (int): L'identifiant unique du book à trouver.
 
         Raises:
             NotImplementedError: Si la méthode n'est pas implémentée.
 
         Returns:
-            Book | None: Le book correspondant au numéro, ou None s'il n'existe pas.
+            Book | None: Le book correspondant à l'identifiant, ou None s'il n'existe pas.
+        """
+        raise NotImplementedError
+
+    def update_many(self, books: List[Book]) -> int:
+        """Mettre à jour plusieurs books dans le dépôt.
+
+        Args:
+            books (List[Book]): La liste des books à mettre à jour.
+
+        Raises:
+            NotImplementedError: Si la méthode n'est pas implémentée.
+
+        Returns:
+            int: Le nombre de books mis à jour.
         """
         raise NotImplementedError
 
@@ -101,11 +115,25 @@ class BookRepositoryInterface:
         """
         raise NotImplementedError
 
-    def delete(self, numero: int) -> bool:
-        """Supprimer un book du dépôt par son numéro.
+    def delete_many(self, ids: List[int]) -> int:
+        """Supprimer plusieurs books du dépôt par leurs identifiants uniques.
 
         Args:
-            numero (int): Le numéro du book à supprimer.
+            ids (List[int]): La liste des identifiants uniques des books à supprimer.
+
+        Raises:
+            NotImplementedError: Si la méthode n'est pas implémentée.
+
+        Returns:
+            int: Le nombre de books supprimés.
+        """
+        raise NotImplementedError
+
+    def delete(self, id: int) -> bool:
+        """Supprimer un book du dépôt par son identifiant unique.
+
+        Args:
+            id (int): L'identifiant unique du book à supprimer.
 
         Raises:
             NotImplementedError: Si la méthode n'est pas implémentée.
