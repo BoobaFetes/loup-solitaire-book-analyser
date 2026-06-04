@@ -3,6 +3,7 @@ dependency-injector==4.49.0
 httpx==0.28.1
 pydantic==2.13.4
 pyright~=1.1.0
-pytest==9.0.3
 pytest-cov==7.1.0
+pytest==9.0.3
 python-dotenv==1.2.2
+ruff==0.15.15
