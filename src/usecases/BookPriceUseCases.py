@@ -1,8 +1,9 @@
 import copy
 import logging
 
+from adapters.BrowserHandlers.types import TBrowser, TElement, TPage
 from domain import Book, BookPrice
-from ports import BookRepositoryInterface, HttpClientBase
+from ports import BookRepositoryInterface, BrowserInterface
 from usecases.price_sources import PriceSourceUsecasesBase
 
 
@@ -14,11 +15,11 @@ class BookPriceUseCases:
     def __init__(
         self,
         repository: BookRepositoryInterface,
-        client: HttpClientBase,
+        browser: BrowserInterface[TBrowser, TPage, TElement],
         sources: list[PriceSourceUsecasesBase],
     ):
         self._repository = repository
-        self._client = client
+        self._browser = browser
         self._logger = logging.getLogger(self.__class__.__name__)
         self._sources: list[PriceSourceUsecasesBase] = sources
 
@@ -26,10 +27,10 @@ class BookPriceUseCases:
         results: list[BookPrice] = []
         isbns = [book.isbn for book in books]
 
-        async with self._client as client:
+        async with self._browser as browser:
             for source in self._sources:
                 self._logger.info(f"Fetching prices from {source.url_base}")
-                results.extend(await source.fetch_bookprices(isbns, client))
+                results.extend(await source.fetch_bookprices(isbns, browser))
 
         return results
 

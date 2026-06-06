@@ -1,7 +1,6 @@
-import asyncio
-
 from domain import BookPrice
-from ports import HttpClientBase
+from ports import BrowserInterface
+from ports.BrowserHandlers.types import TBrowser, TElement, TPage
 from usecases.price_sources.AmazonPriceSourceDetails import AmazonPriceSourceDetails
 from usecases.price_sources.PriceSourceUsecasesBase import PriceSourceUsecasesBase
 
@@ -11,29 +10,36 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
         return f"{self.url_base}s?k={isbn}"
 
     async def fetch_bookprices(
-        self, isbns: list[str], client: HttpClientBase
+        self, isbns: list[str], browser: BrowserInterface[TBrowser, TPage, TElement]
     ) -> list[BookPrice]:
         results: list[BookPrice] = []
 
-        self._logger.info(f"Fetching book prices for {len(isbns)} ISBNs")
+        # TODO : il faut revoir le process, car si on ouvre immédiatement la page avec .?k=<isbn> on se retrouve avec un page vide avec "toutes nos excuses, l'équipe d'amazon"
+        # je penses que le message est claire : l'équipe d'amazon me remercie d'avoir essayer et de faire partie de leur statistique, histoire de me verrouiller y a pas mieux .....
+
+        self._logger.info(f"searching book prices for {len(isbns)} ISBNs")
         for i in range(0, len(isbns), self._parallel_calls):
             selected_isbns = isbns[i : i + self._parallel_calls]
-            tasks = [self.fetch_bookprice(isbn, client) for isbn in selected_isbns]
-            results.extend(
-                [
-                    book_price
-                    for book_price in await asyncio.gather(*tasks)
-                    if book_price
-                ]
-            )
+            price = await self.fetch_bookprice(selected_isbns[0], browser)
+            if price:
+                results.append(price)
+            # for debug tasks = [self.fetch_bookprice(isbn, browser) for isbn in selected_isbns]
+            # for debug results.extend(
+            # for debug     [
+            # for debug         book_price
+            # for debug         for book_price in await asyncio.gather(*tasks)
+            # for debug         if book_price
+            # for debug     ]
+            # for debug )
 
         return results
 
     async def fetch_bookprice(
-        self, isbn: str, client: HttpClientBase
+        self, isbn: str, browser: BrowserInterface[TBrowser, TPage, TElement]
     ) -> BookPrice | None:
         url = self._build_search_url_by_isbn(isbn)
-        html = await client.get_text(url)
+        page = await browser.new_page(url)
+        html = await page.html()
         if not html:
             self._logger.warning(
                 f"No HTML content retrieved for ISBN {isbn} from {self.url_base}"

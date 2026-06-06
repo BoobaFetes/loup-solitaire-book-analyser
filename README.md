@@ -83,6 +83,18 @@ loup-solitaire-book-analyser
    pip install -r requirements.txt
    ```
 
+5. using playwright, we have to install browser that will use:
+
+   ```bash
+   playwright install chromium
+   ```
+
+   **[RESTE A PROUVER]** For linux distribution with missing dependencies, you can use the following command to install the necessary dependencies along with the browser:
+
+   ```bash
+   playwright install --with-deps chrome
+   ```
+
 ---
 
 ## Running the Application

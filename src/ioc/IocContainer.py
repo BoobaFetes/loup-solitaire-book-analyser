@@ -6,9 +6,11 @@ from dependency_injector import containers, providers
 
 from adapters import (
     BookFileRepository,
+    BrowserAdapter,
     FileSystemAdapter,
     HttpClientAdapter,
 )
+from adapters.BrowserHandlers.PageHandlerAdapter import PageHandlerAdapter
 from usecases import BookListUseCases, BookPriceUseCases
 from usecases.book_list.NonOfficialBookUseCases import NonOfficialBookUseCases
 from usecases.book_list.OfficialBookUseCases import OfficialBookUseCases
@@ -92,6 +94,10 @@ class IocContainer(containers.DeclarativeContainer):
     # endregion
 
     # region book price usecases
+    browser = providers.Singleton(
+        BrowserAdapter,
+        page_factory=lambda page: PageHandlerAdapter(page),
+    )
 
     amazon_price_source_usecases = providers.Singleton(
         AmazonPriceSourceUsecases,
@@ -113,7 +119,7 @@ class IocContainer(containers.DeclarativeContainer):
     book_price_usecases = providers.Singleton(
         BookPriceUseCases,
         repository=book_repository,
-        client=http_client,
+        browser=browser,
         sources=providers.List(
             amazon_price_source_usecases,
         ),
