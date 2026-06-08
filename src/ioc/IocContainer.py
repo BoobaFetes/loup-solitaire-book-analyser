@@ -97,6 +97,7 @@ class IocContainer(containers.DeclarativeContainer):
     browser = providers.Singleton(
         BrowserAdapter,
         page_factory=lambda page: PageHandlerAdapter(page),
+        env=config.env,
     )
 
     amazon_price_source_usecases = providers.Singleton(

@@ -25,12 +25,11 @@ class BookPriceUseCases:
 
     async def fetch_prices(self, books: list[Book]) -> list[BookPrice]:
         results: list[BookPrice] = []
-        isbns = [book.isbn for book in books]
 
         async with self._browser as browser:
             for source in self._sources:
                 self._logger.info(f"Fetching prices from {source.url_base}")
-                results.extend(await source.fetch_bookprices(isbns, browser))
+                results.extend(await source.fetch_bookprices(books, browser))
 
         return results
 

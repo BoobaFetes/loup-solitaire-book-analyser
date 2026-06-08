@@ -1,7 +1,7 @@
 import logging
 
 from adapters.BrowserHandlers.types import TBrowser, TElement, TPage
-from domain import BookPrice
+from domain import Book, BookPrice
 from ports import BookRepositoryInterface
 from ports.BrowserInterface import BrowserInterface
 
@@ -24,14 +24,14 @@ class PriceSourceUsecasesBase:
         )
 
     async def fetch_bookprices(
-        self, isbns: list[str], browser: BrowserInterface[TBrowser, TPage, TElement]
+        self, books: list[Book], browser: BrowserInterface[TBrowser, TPage, TElement]
     ) -> list[BookPrice]:
         raise NotImplementedError(
             "fetch_bookprices method must be implemented by subclasses"
         )
 
     async def fetch_bookprice(
-        self, isbn: str, browser: BrowserInterface[TBrowser, TPage, TElement]
+        self, book: Book, browser: BrowserInterface[TBrowser, TPage, TElement]
     ) -> BookPrice | None:
         raise NotImplementedError(
             "fetch_bookprice method must be implemented by subclasses"

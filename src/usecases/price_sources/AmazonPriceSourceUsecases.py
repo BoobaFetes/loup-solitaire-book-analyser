@@ -1,4 +1,6 @@
-from domain import BookPrice
+import asyncio
+
+from domain import Book, BookPrice
 from ports import BrowserInterface
 from ports.BrowserHandlers.types import TBrowser, TElement, TPage
 from usecases.price_sources.AmazonPriceSourceDetails import AmazonPriceSourceDetails
@@ -6,53 +8,56 @@ from usecases.price_sources.PriceSourceUsecasesBase import PriceSourceUsecasesBa
 
 
 class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
-    def _build_search_url_by_isbn(self, isbn: str) -> str:
-        return f"{self.url_base}s?k={isbn}"
-
     async def fetch_bookprices(
-        self, isbns: list[str], browser: BrowserInterface[TBrowser, TPage, TElement]
+        self, books: list[Book], browser: BrowserInterface[TBrowser, TPage, TElement]
     ) -> list[BookPrice]:
         results: list[BookPrice] = []
 
-        # TODO : il faut revoir le process, car si on ouvre immédiatement la page avec .?k=<isbn> on se retrouve avec un page vide avec "toutes nos excuses, l'équipe d'amazon"
-        # je penses que le message est claire : l'équipe d'amazon me remercie d'avoir essayer et de faire partie de leur statistique, histoire de me verrouiller y a pas mieux .....
+        self._logger.info(f"searching book prices for {len(books)} books")
+        for i in range(0, len(books), self._parallel_calls):
+            selected_books = books[i : i + self._parallel_calls]
 
-        self._logger.info(f"searching book prices for {len(isbns)} ISBNs")
-        for i in range(0, len(isbns), self._parallel_calls):
-            selected_isbns = isbns[i : i + self._parallel_calls]
-            price = await self.fetch_bookprice(selected_isbns[0], browser)
-            if price:
-                results.append(price)
-            # for debug tasks = [self.fetch_bookprice(isbn, browser) for isbn in selected_isbns]
-            # for debug results.extend(
-            # for debug     [
-            # for debug         book_price
-            # for debug         for book_price in await asyncio.gather(*tasks)
-            # for debug         if book_price
-            # for debug     ]
-            # for debug )
+            results.extend(
+                [
+                    book_price
+                    for book_price in await asyncio.gather(
+                        *[
+                            self.fetch_bookprice(book, browser)
+                            for book in selected_books
+                        ]
+                    )
+                    if book_price
+                ]
+            )
 
         return results
 
     async def fetch_bookprice(
-        self, isbn: str, browser: BrowserInterface[TBrowser, TPage, TElement]
+        self, book: Book, browser: BrowserInterface[TBrowser, TPage, TElement]
     ) -> BookPrice | None:
-        url = self._build_search_url_by_isbn(isbn)
-        page = await browser.new_page(url)
+        page = await browser.new_page(self.url_base)
+
+        # search for the book using the isbn
+        # await page.action.wait_for("#twotabsearchtextbox")
+        await page.action.set_value("#twotabsearchtextbox", book.isbn)
+        await page.action.click("#nav-search-submit-button")
+
+        # waiting for the search results to load and display the results
+        book_element = await page.action.get_by_text(book.titre)
+        await page.action.wait_element(book_element)
+
         html = await page.html()
-        if not html:
-            self._logger.warning(
-                f"No HTML content retrieved for ISBN {isbn} from {self.url_base}"
-            )
-            return None
+        close_page_action = page.close()
 
         details = AmazonPriceSourceDetails(html)
+        price, currency = details.price_and_currency(book.isbn)
+        url = details.url(self.url_base, book.isbn)
 
-        price, currency = details.price_and_currency(isbn)
+        await asyncio.gather(close_page_action)
         return BookPrice(
-            isbn=isbn,
+            isbn=book.isbn,
             source=self.url_base,
             prix=price,
-            url=details.url(self.url_base, isbn),
+            url=url,
             currency=currency,
         )

@@ -17,15 +17,22 @@ class BrowserAdapter(BrowserInterface[TBrowser, TPage, TElement]):
         page_factory: Callable[
             [TPage], PageHandlerInterface[TBrowser, TPage, TElement]
         ],
+        **kwargs,
     ):
         super().__init__()
         self._page_factory = page_factory
         self.browser: Browser = None  # type: ignore
+        self.__options = kwargs
+        if kwargs.get("env"):
+            self.__options["headless"] = kwargs["env"] != "dev"
+            del self.__options["env"]
 
     async def __aenter__(self):
         self.__context_manager = async_playwright()
         self.__playwright = await self.__context_manager.start()
-        self.browser = await self.__playwright.chromium.launch(headless=True)
+        self.browser = await self.__playwright.chromium.launch(
+            headless=self.__options.get("headless", True)
+        )
         self.browser.on(
             "context", lambda browser: self._logger.info("Browser connected")
         )
