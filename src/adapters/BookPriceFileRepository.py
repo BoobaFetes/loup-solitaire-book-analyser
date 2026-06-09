@@ -107,12 +107,6 @@ class BookPriceFileRepository(BookPriceRepositoryInterface):
             )
         return False
 
-    def list_by_isbns(self, isbns: list[str] = []) -> dict[str, list[BookPrice]]:
-        data = self.__extract()
-        if not isbns:
-            return data
-        return {isbn: data.get(isbn, []) for isbn in isbns}
-
     def list(self, isbn: str) -> List[BookPrice]:
         """Retourner la liste de tous les book prices pour un ISBN donné.
 
@@ -134,6 +128,49 @@ class BookPriceFileRepository(BookPriceRepositoryInterface):
                 exc_info=True,
             )
         return []
+
+    def list_by_isbns(self, isbns: list[str] = []) -> dict[str, list[BookPrice]]:
+        data = self.__extract()
+        if not isbns:
+            return data
+        return {isbn: data.get(isbn, []) for isbn in isbns}
+
+    def list_last_price_of_source_by_isbns(
+        self, sources: list[str], isbns: list[str] = []
+    ) -> dict[str, dict[str, BookPrice | None]]:
+        results: dict[str, dict[str, BookPrice | None]] = {}
+        data = self.__extract()
+        for isbn in isbns:
+            for source in sources:
+                source_prices_by_isbn = [
+                    price for price in data.get(isbn, []) if price.source == source
+                ]
+                last_price_of_source = max(
+                    source_prices_by_isbn, key=lambda p: p.date, default=None
+                )
+                if isbn not in results:
+                    results[isbn] = {}
+                results[isbn][source] = last_price_of_source
+
+        return results
+
+        if not isbns:
+            isbns = list(data.keys())
+        result: dict[str, list[BookPrice]] = {}
+        for isbn in isbns:
+            prices = data.get(isbn, [])
+            if prices:
+                last_price_by_source: dict[str, BookPrice] = {}
+                for price in prices:
+                    last_price_by_source[price.source] = max(
+                        price,
+                        last_price_by_source.get(price.source),
+                        key=lambda p: p.date,
+                    )
+                result[isbn] = list(last_price_by_source.values())
+            else:
+                result[isbn] = []
+        return result
 
     def get(self, isbn: str, source: str, date: str | None = None) -> BookPrice:
         """Récupère un book price par son ISBN, sa source et éventuellement sa date.
@@ -203,12 +240,63 @@ class BookPriceFileRepository(BookPriceRepositoryInterface):
             return price.date == stored_price.date
         elif for_operation == "add":
             # dans le cas d'un ajout, la date ne doit pas matcher
-            return True
+            return (
+                price.date != stored_price.date
+            )  # may be ? set to before=> return True
         else:
             # vu que l'on utilise pyright pour valider les types, cette condition ne devrait jamais être vérifiée, mais on la laisse pour garantir la robustesse du code en cas de mauvaise utilisation de la méthode
             raise ValueError(
                 f"Invalid operation: {for_operation}. Expected 'add', 'update' or 'delete'."
             )
+
+    def upsert_many(self, prices: List[BookPrice]) -> int:
+        """Ajouter ou mettre à jour plusieurs book prices dans le dépôt.
+
+        Args:
+            prices (List[BookPrice]): La liste des book prices à ajouter ou mettre à jour.
+
+        Raises:
+            Exception: Si une erreur se produit lors de l'ajout ou de la mise à jour des book prices.
+
+        Returns:
+            int: Le nombre de book prices ajoutés ou mis à jour.
+        """
+        try:
+            if not prices:
+                return 0
+
+            data = self.__extract()
+
+            count = 0
+            for price in prices:
+                stored_data = data.get(price.isbn, [])
+                data[price.isbn] = stored_data
+
+                is_update_operation = False
+                for i, stored_price in enumerate(stored_data):
+                    if self._keys_matches(price, stored_price, for_operation="update"):
+                        is_update_operation = True
+                        stored_data[i] = price
+                        count += 1
+                        break
+
+                # en python, on aurait pu utiliser le for/else mais en terme de lecture ca peut etre piegeux, on utilise la facon utilisé par 99% des devs (tout language confondu)
+                if not is_update_operation:
+                    stored_data.append(price)
+                    count += 1
+
+            self.__persist(data)
+            self._logger.info(
+                f"Upserted {count} book prices in file system at {self._connection_string}",
+            )
+            return count
+        except Exception as e:
+            self._logger.error(
+                f"Error upserting book prices: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
+
+        return 0
 
     def add_many(self, prices: List[BookPrice]) -> int:
         """Ajouter plusieurs book prices au dépôt.
@@ -223,6 +311,9 @@ class BookPriceFileRepository(BookPriceRepositoryInterface):
             int: Le nombre de book prices ajoutés.
         """
         try:
+            if not prices:
+                return 0
+
             data = self.__extract()
 
             count = 0
@@ -284,7 +375,7 @@ class BookPriceFileRepository(BookPriceRepositoryInterface):
             stored_data.append(price)
             self.__persist(data)
             self._logger.info(
-                f"Added book price for ISBN {price.isbn} with source {price.source} and price {price.prix} {price.currency} to file system at {self._connection_string}",
+                f"Added book price for ISBN {price.isbn} with source {price.source} and price {price.price} {price.currency} to file system at {self._connection_string}",
             )
             return True
         except Exception as e:
@@ -307,6 +398,9 @@ class BookPriceFileRepository(BookPriceRepositoryInterface):
             int: Le nombre de book prices mis à jour.
         """
         try:
+            if not prices:
+                return 0
+
             data = self.__extract()
 
             count = 0
@@ -359,7 +453,7 @@ class BookPriceFileRepository(BookPriceRepositoryInterface):
 
             self.__persist(data)
             self._logger.info(
-                f"Updated book price for ISBN {price.isbn} with source {price.source} and price {price.prix} {price.currency} in file system at {self._connection_string}",
+                f"Updated book price for ISBN {price.isbn} with source {price.source} and price {price.price} {price.currency} in file system at {self._connection_string}",
             )
             return True
         except Exception as e:

@@ -14,15 +14,15 @@ class BookPrice(BaseModel):
         BaseModel: The base model class from Pydantic.
     """
 
-    isbn: str = Field(default="")
+    isbn: str
     source: str
     date: Date = Field(default_factory=lambda: datetime.now(timezone.utc).date())
-    prix: float
+    price: float
     url: str
     currency: str
 
     def __str__(self) -> str:
-        return f"[date: {self.date}] [source: {self.source:<30}] [ISBN: {self.isbn:>13}] {self.prix:>3} {self.currency} [url: {self.url}]"
+        return f"[date: {self.date}] [source: {self.source:<30}] [ISBN: {self.isbn:>13}] {self.price:>3} {self.currency} [url: {self.url}]"
 
     # region equality and hashing based on id to ensure that books with the same numero are considered equal (uses of Set type)
     def __hash__(self) -> int:

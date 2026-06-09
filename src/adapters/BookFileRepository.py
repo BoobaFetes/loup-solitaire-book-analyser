@@ -13,14 +13,19 @@ implémentation concrète. On peut remplacer BookFileRepository par une
 implémentation DB sans modifier le domaine.
 """
 
+import copy
 import logging
 from json import dumps as json_dumps
 from json import loads as json_loads
 from typing import Any, List
 from urllib.parse import urljoin
 
-from domain import Book
-from ports import BookRepositoryInterface, FileSystemInterface
+from domain import Book, BookPrice
+from ports import (
+    BookPriceRepositoryInterface,
+    BookRepositoryInterface,
+    FileSystemInterface,
+)
 
 
 class BookFileRepository(BookRepositoryInterface):
@@ -37,10 +42,12 @@ class BookFileRepository(BookRepositoryInterface):
     def __init__(
         self,
         fs: FileSystemInterface,
+        price_repository: BookPriceRepositoryInterface,
         connection_string: str,
     ):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._fs: FileSystemInterface = fs
+        self._price_repository: BookPriceRepositoryInterface = price_repository
         self._connection_string: str = urljoin(connection_string, "books.data.json")
         if not self._fs.is_file_exists(self._connection_string):
             self._fs.write_file(self._connection_string, "{}")
@@ -114,59 +121,66 @@ class BookFileRepository(BookRepositoryInterface):
             )
         return []
 
-    def add_many(self, books: List[Book]) -> int:
-        """Ajouter plusieurs books au dépôt.
+    def upsert_many(self, books: List[Book]) -> int:
+        """Ajouter ou mettre à jour plusieurs books dans le dépôt.
 
         Args:
-            books (List[Book]): La liste des books à ajouter.
+            books (List[Book]): La liste des books à ajouter ou mettre à jour.
 
         Raises:
-            Exception: Si une erreur se produit lors de l'ajout des books.
+            Exception: Si une erreur se produit lors de l'ajout ou de la mise à jour des books.
 
         Returns:
-            int: Le nombre de books ajoutés.
+            int: Le nombre de books ajoutés ou mis à jour.
         """
         try:
             data: dict[str, Book] = self.__extract()
-            for book in books:
+            prices: list[BookPrice] = []
+            count = 0
+            for book in copy.deepcopy(books):
+                prices.extend(book.prices)
+                book.prices = []
                 data[str(book.id)] = book
+                count += 1
 
-            count = len(data.keys())
             self.__persist(data)
             self._logger.info(
-                f"Added {count} books to file system at {self._connection_string}",
+                f"Upserted {count} books to file system at {self._connection_string}",
             )
+
+            # upsert dependancies (simulate behavior of a real DB with relations)
+            self._price_repository.upsert_many(prices)
             return count
         except Exception as e:
             self._logger.error(
-                f"Error adding books: {type(e).__name__}: {e}", exc_info=True
+                f"Error upserting books: {type(e).__name__}: {e}", exc_info=True
             )
 
         return 0
 
-    def add(self, book: Book) -> bool:
-        """Ajoute un book au dépôt.
+    def upsert(self, book: Book) -> bool:
+        """Ajouter ou mettre à jour un book dans le dépôt.
 
         Args:
-            book (Book): Le book à ajouter.
+            book (Book): Le book à ajouter ou mettre à jour.
 
         Raises:
-            Exception: Si une erreur se produit lors de l'ajout du book.
+            Exception: Si une erreur se produit lors de l'ajout ou de la mise à jour du book.
 
         Returns:
-            bool: True si le book a été ajouté avec succès, False sinon.
+            bool: True si le book a été ajouté ou mis à jour avec succès, False sinon.
         """
         try:
             data: dict[str, Book] = self.__extract()
             data[str(book.numero)] = book
             self.__persist(data)
             self._logger.info(
-                f"Added book {book.numero} to file system at {self._connection_string}",
+                f"Upserted book {book.numero} to file system at {self._connection_string}",
             )
             return True
         except Exception as e:
             self._logger.error(
-                f"Error adding book {book.numero}: {type(e).__name__}: {e}",
+                f"Error upserting book {book.numero}: {type(e).__name__}: {e}",
                 exc_info=True,
             )
         return False

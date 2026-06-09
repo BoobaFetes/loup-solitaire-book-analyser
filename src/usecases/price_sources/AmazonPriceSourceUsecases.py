@@ -22,7 +22,7 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
                 f"searching book price for n°{book.numero} {book.titre} ({book.isbn})"
             )
             price = await self.fetch_bookprice(book, browser, context_index)
-            if price and price.prix > 0:
+            if price and price.price > 0:
                 results.append(price)
 
         return results
@@ -55,7 +55,7 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
         return BookPrice(
             isbn=book.isbn,
             source=self.url_base,
-            prix=price,
-            url=url,
+            price=price,
             currency=currency,
+            url=url,
         )

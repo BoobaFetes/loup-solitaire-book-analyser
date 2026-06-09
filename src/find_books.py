@@ -1,13 +1,14 @@
 import asyncio
 import logging
+from pathlib import Path
 
-from domain import Book
 from ioc import new_ioc_container, print_environment_variables
 
 
 async def main():
     # load dependencies
-    container = new_ioc_container()
+
+    container = new_ioc_container(script_name=Path(__file__).stem)
 
     logger = logging.getLogger(__name__)
     logger.info("IOC container initialized")
@@ -18,7 +19,7 @@ async def main():
     book_list_usecases = container.book_list_usecases()
 
     # action
-    books: list[Book] = await book_list_usecases.fetch_books()
+    books = await book_list_usecases.fetch_books()
 
     # pour le moment on fait kiss pour la persistance de données => direct dans un fichier json
     # pour l'hebergement on pensera donc à un volume pour l'instant sachant qu'il faudra trouver un chart helm pour la base de donnée qui reste à choisir => postgresql, tinydb, etc

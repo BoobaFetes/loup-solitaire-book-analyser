@@ -109,7 +109,9 @@ class OfficialBookDetails:
 
         return default_value
 
-    def prices(self, url: str, default_value: list[BookPrice] = []) -> list[BookPrice]:
+    def prices(
+        self, url: str, isbn: str, default_value: list[BookPrice] = []
+    ) -> list[BookPrice]:
         element = self._soup.select_one("p.Book-price > span:last-child")
         if not element:
             self._logger.error("No potential price information found in the page.")
@@ -119,10 +121,11 @@ class OfficialBookDetails:
         return (
             [
                 BookPrice(
-                    prix=float(gallimard_price[0]),
-                    currency="EUR" if gallimard_price[1] == "€" else "",
-                    url=url,
+                    isbn=isbn,
                     source="Gallimard Jeunesse",
+                    price=float(gallimard_price[0]),
+                    currency=gallimard_price[1] if gallimard_price[1] == "€" else "",
+                    url=url,
                 )
             ]
             if gallimard_price

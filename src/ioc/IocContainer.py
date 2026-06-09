@@ -67,15 +67,16 @@ class IocContainer(containers.DeclarativeContainer):
         FileSystemAdapter,
         path=config.root_dir,
     )
-    book_repository = providers.Singleton(
-        BookFileRepository,
-        fs=file_system,
-        connection_string=config.connection_string,
-    )
     book_price_repository = providers.Singleton(
         BookPriceFileRepository,
         fs=file_system,
         connection_string=config.connection_string,
+    )
+    book_repository = providers.Singleton(
+        BookFileRepository,
+        fs=file_system,
+        connection_string=config.connection_string,
+        price_repository=book_price_repository,
     )
     # endregion
 
@@ -145,7 +146,7 @@ def check_numeric_env_variables(
         ) from e
 
 
-def new_ioc_container() -> IocContainer:
+def new_ioc_container(script_name: str) -> IocContainer:
     container = IocContainer()
 
     # load environment variables
@@ -163,6 +164,15 @@ def new_ioc_container() -> IocContainer:
     container.config.connection_string.from_env("CONNECTION_STRING", required=True)
     container.config.log_level.from_env("LOG_LEVEL", default="INFO")
     container.config.log_file.from_env("LOG_FILE", required=True)
+
+    # arrange log file name to include script name for better separation of logs between different scripts
+    log_file = Path(container.config.log_file())
+    container.config.log_file.from_value(
+        str(
+            log_file.parent
+            / f"{log_file.stem}_{script_name.strip('_')}{log_file.suffix}"
+        )
+    )
 
     # environment variables are strings by default, force API timeout to numeric
     api_timeout = check_numeric_env_variables(

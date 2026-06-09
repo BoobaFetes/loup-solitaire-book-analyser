@@ -31,6 +31,34 @@ class BookPriceRepositoryInterface:
         """
         raise NotImplementedError
 
+    def list_by_isbns(self, isbns: list[str] = []) -> dict[str, list[BookPrice]]:
+        """Retourner la liste de tous les book prices pour une liste d'ISBN.
+
+        Args:
+            isbns (list[str], optional): La liste des ISBN à rechercher. Si vide, retourne tous les book prices. Defaults to [].
+
+        Raises:
+            NotImplementedError: Si la méthode n'est pas implémentée.
+        Returns:
+            dict[str, list[BookPrice]]: Un dictionnaire où les clés sont les ISBN et les valeurs sont des listes de book prices correspondants.
+        """
+        raise NotImplementedError
+
+    def list_last_price_of_source_by_isbns(
+        self, sources: list[str], isbns: list[str] = []
+    ) -> dict[str, dict[str, BookPrice | None]]:
+        """Retourner la liste du dernier book price pour une liste d'ISBN.
+
+        Args:
+            isbns (list[str], optional): La liste des ISBN à rechercher. Si vide, retourne tous les book prices. Defaults to [].
+
+        Raises:
+            NotImplementedError: Si la méthode n'est pas implémentée.
+        Returns:
+            dict[str, list[BookPrice]]: Un dictionnaire où les clés sont les ISBN et les valeurs sont des listes de book prices correspondants.
+        """
+        raise NotImplementedError
+
     def get(self, isbn: str, source: str, date: str | None = None) -> BookPrice:
         """Récupérer un book price par son identifiant unique.
 
@@ -56,6 +84,20 @@ class BookPriceRepositoryInterface:
 
         Returns:
             BookPrice | None: Le book price correspondant à l'identifiant, ou None s'il n'existe pas.
+        """
+        raise NotImplementedError
+
+    def upsert_many(self, prices: List[BookPrice]) -> int:
+        """Ajouter ou mettre à jour plusieurs book prices dans le dépôt.
+
+        Args:
+            prices (List[BookPrice]): La liste des book prices à ajouter ou mettre à jour.
+
+        Raises:
+            NotImplementedError: Si la méthode n'est pas implémentée.
+
+        Returns:
+            int: Le nombre de book prices ajoutés ou mis à jour.
         """
         raise NotImplementedError
 
@@ -91,7 +133,7 @@ class BookPriceRepositoryInterface:
         """Mettre à jour plusieurs book prices dans le dépôt.
 
         Args:
-            book_prices (List[BookPrice]): La liste des book prices à mettre à jour.
+            prices (List[BookPrice]): La liste des book prices à mettre à jour.
 
         Raises:
             NotImplementedError: Si la méthode n'est pas implémentée.
@@ -105,7 +147,7 @@ class BookPriceRepositoryInterface:
         """Mettre à jour un book price existant dans le dépôt.
 
         Args:
-            book_price (BookPrice): Le book price à mettre à jour.
+            price (BookPrice): Le book price à mettre à jour.
 
         Raises:
             NotImplementedError: Si la méthode n'est pas implémentée.
@@ -119,7 +161,7 @@ class BookPriceRepositoryInterface:
         """Supprimer plusieurs book prices du dépôt par leurs identifiants uniques.
 
         Args:
-            ids (List[int]): La liste des identifiants uniques des book prices à supprimer.
+            prices (List[BookPrice]): La liste des book prices à supprimer.
 
         Raises:
             NotImplementedError: Si la méthode n'est pas implémentée.
@@ -133,7 +175,7 @@ class BookPriceRepositoryInterface:
         """Supprimer un book price du dépôt par son identifiant unique.
 
         Args:
-            id (int): L'identifiant unique du book price à supprimer.
+            price (BookPrice): Le book price à supprimer.
 
         Raises:
             NotImplementedError: Si la méthode n'est pas implémentée.

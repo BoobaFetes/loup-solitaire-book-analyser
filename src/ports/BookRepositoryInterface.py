@@ -31,31 +31,31 @@ class BookRepositoryInterface:
         """
         raise NotImplementedError
 
-    def add_many(self, books: List[Book]) -> int:
-        """Ajouter plusieurs books au dépôt.
+    def upsert_many(self, books: List[Book]) -> int:
+        """Ajouter ou mettre à jour plusieurs books dans le dépôt.
 
         Args:
-            books (List[Book]): La liste des books à ajouter.
+            books (List[Book]): La liste des books à ajouter ou mettre à jour.
 
         Raises:
             NotImplementedError: Si la méthode n'est pas implémentée.
 
         Returns:
-            int: Le nombre de books ajoutés.
+            int: Le nombre de books ajoutés ou mis à jour.
         """
         raise NotImplementedError
 
-    def add(self, book: Book) -> bool:
-        """Ajouter un book au dépôt.
+    def upsert(self, book: Book) -> bool:
+        """Ajouter ou mettre à jour un book dans le dépôt.
 
         Args:
-            book (Book): Le book à ajouter.
+            book (Book): Le book à ajouter ou mettre à jour.
 
         Raises:
             NotImplementedError: Si la méthode n'est pas implémentée.
 
         Returns:
-            bool: True si le book a été ajouté, False sinon.
+            bool: True si le book a été ajouté ou mis à jour avec succès, False sinon.
         """
         raise NotImplementedError
 

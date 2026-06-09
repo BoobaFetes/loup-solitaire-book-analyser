@@ -46,11 +46,9 @@ class BookListUseCases:
         books.sort(key=lambda b: b.id)
 
         self._logger.info("records books in repository")
-        self._repository.clear()
-        added_count = self._repository.add_many(books)
+        added_count = self._repository.upsert_many(books)
         if added_count != len(books):
-            self._logger.warning("Not all books were added to the repository.")
-            raise ValueError("Not all books were added to the repository.")
+            self._logger.warning("Not all books were upserted to the repository.")
 
         return self._repository.list()
 
@@ -81,7 +79,7 @@ class BookListUseCases:
                 if not books_by_currency.get(price.currency):
                     books_by_currency[price.currency] = {"total": 0.0, "average": 0.0}
 
-                books_by_currency[price.currency]["total"] += price.prix
+                books_by_currency[price.currency]["total"] += price.price
                 books_by_currency[price.currency]["average"] = (
                     books_by_currency[price.currency]["total"] / len(book.prices)
                     if book.prices

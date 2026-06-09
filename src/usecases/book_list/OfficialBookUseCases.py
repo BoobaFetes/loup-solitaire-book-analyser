@@ -117,7 +117,7 @@ class OfficialBookUseCases:
                 self._logger.error(
                     f"Could not find a valid book's number at {url}. Defaulting to {numero_options['id']}.",
                 )
-
+            isbn = details.isbn("")
             book = Book(
                 id=id,
                 url=url,
@@ -126,9 +126,9 @@ class OfficialBookUseCases:
                 authors=authors,
                 lastParutionDate=details.last_parution_date("1900-01-01"),
                 description=details.description(""),
-                isbn=details.isbn(""),
+                isbn=isbn,
                 image=await details.image_url(active_client),
-                prices=details.prices(url, []),
+                prices=details.prices(url, isbn, []),
                 official=True,
             )
         except Exception as e:
@@ -148,7 +148,7 @@ class OfficialBookUseCases:
                 if not books_by_currency.get(price.currency):
                     books_by_currency[price.currency] = {"total": 0.0, "average": 0.0}
 
-                books_by_currency[price.currency]["total"] += price.prix
+                books_by_currency[price.currency]["total"] += price.price
                 books_by_currency[price.currency]["average"] = (
                     books_by_currency[price.currency]["total"] / len(book.prices)
                     if book.prices
