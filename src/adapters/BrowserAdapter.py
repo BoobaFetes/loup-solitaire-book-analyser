@@ -49,20 +49,23 @@ class BrowserAdapter(BrowserInterface[TBrowser, TPage, TElement]):
     async def start(self) -> None:
         await self.__aenter__()
 
+    async def close(self) -> None:
+        await self.__aexit__(None, None, None)
+
+    async def new_context(self) -> int:
+        index = len(self.browser.contexts)
+        await self.browser.new_context()
+        return index
+
     async def new_page(
-        self, url: str
+        self,
+        url: str,
+        context_index: int = 0,
     ) -> PageHandlerInterface[TBrowser, TPage, TElement]:
-        page = await self.browser.new_page()
+        context = self.browser.contexts[context_index]
+        page = await context.new_page()
         page_handler = self._page_factory(page)
         await page_handler.goto(url)
 
         self.pages.append(page_handler)
         return page_handler
-
-    async def close_page(self, index: int) -> bool:
-        if index not in range(len(self.pages)):
-            return False
-
-        # the page will remove itself from the browser pages list when closed
-        await self.pages[index].close()
-        return True

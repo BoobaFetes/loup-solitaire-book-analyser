@@ -29,11 +29,15 @@ class BrowserInterface(Generic[TBrowser, TPage, TElement]):
     async def start(self) -> None:
         raise NotImplementedError("BrowserInterface does not implement start")
 
+    async def close(self) -> None:
+        raise NotImplementedError("BrowserInterface does not implement close")
+
+    async def new_context(self) -> int:
+        raise NotImplementedError("BrowserInterface does not implement new_context")
+
     async def new_page(
         self,
         url: str,
+        context_index: int = 0,
     ) -> PageHandlerInterface[TBrowser, TPage, TElement]:
         raise NotImplementedError("BrowserInterface does not implement new_page")
-
-    async def close_page(self, index: int) -> bool:
-        raise NotImplementedError("BrowserInterface does not implement close_page")

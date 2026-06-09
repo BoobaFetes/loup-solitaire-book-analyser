@@ -14,8 +14,6 @@ async def main():
 
     print_environment_variables(container, logger)
 
-    logger.info("IOC : common instances (singleton) created")
-
     # arrange
     book_list_usecases = container.book_list_usecases()
 

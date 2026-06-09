@@ -9,33 +9,31 @@ from usecases.price_sources.PriceSourceUsecasesBase import PriceSourceUsecasesBa
 
 class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
     async def fetch_bookprices(
-        self, books: list[Book], browser: BrowserInterface[TBrowser, TPage, TElement]
+        self,
+        books: list[Book],
+        browser: BrowserInterface[TBrowser, TPage, TElement],
+        context_index: int = 0,
     ) -> list[BookPrice]:
         results: list[BookPrice] = []
 
         self._logger.info(f"searching book prices for {len(books)} books")
-        for i in range(0, len(books), self._parallel_calls):
-            selected_books = books[i : i + self._parallel_calls]
-
-            results.extend(
-                [
-                    book_price
-                    for book_price in await asyncio.gather(
-                        *[
-                            self.fetch_bookprice(book, browser)
-                            for book in selected_books
-                        ]
-                    )
-                    if book_price
-                ]
+        for book in books:
+            self._logger.info(
+                f"searching book price for n°{book.numero} {book.titre} ({book.isbn})"
             )
+            price = await self.fetch_bookprice(book, browser, context_index)
+            if price and price.prix > 0:
+                results.append(price)
 
         return results
 
     async def fetch_bookprice(
-        self, book: Book, browser: BrowserInterface[TBrowser, TPage, TElement]
+        self,
+        book: Book,
+        browser: BrowserInterface[TBrowser, TPage, TElement],
+        context_index: int = 0,
     ) -> BookPrice | None:
-        page = await browser.new_page(self.url_base)
+        page = await browser.new_page(self.url_base, context_index)
 
         # search for the book using the isbn
         # await page.action.wait_for("#twotabsearchtextbox")

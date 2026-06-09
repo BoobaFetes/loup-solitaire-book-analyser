@@ -6,6 +6,7 @@ from dependency_injector import containers, providers
 
 from adapters import (
     BookFileRepository,
+    BookPriceFileRepository,
     BrowserAdapter,
     FileSystemAdapter,
     HttpClientAdapter,
@@ -71,6 +72,11 @@ class IocContainer(containers.DeclarativeContainer):
         fs=file_system,
         connection_string=config.connection_string,
     )
+    book_price_repository = providers.Singleton(
+        BookPriceFileRepository,
+        fs=file_system,
+        connection_string=config.connection_string,
+    )
     # endregion
 
     # region usecases
@@ -102,7 +108,6 @@ class IocContainer(containers.DeclarativeContainer):
 
     amazon_price_source_usecases = providers.Singleton(
         AmazonPriceSourceUsecases,
-        repository=book_repository,
         url_base="https://www.amazon.fr/",
         parallel_calls=config.api_parallel_calls,
     )
@@ -119,7 +124,7 @@ class IocContainer(containers.DeclarativeContainer):
 
     book_price_usecases = providers.Singleton(
         BookPriceUseCases,
-        repository=book_repository,
+        repository=book_price_repository,
         browser=browser,
         sources=providers.List(
             amazon_price_source_usecases,

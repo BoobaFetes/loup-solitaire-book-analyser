@@ -17,6 +17,7 @@ import logging
 from json import dumps as json_dumps
 from json import loads as json_loads
 from typing import Any, List
+from urllib.parse import urljoin
 
 from domain import Book
 from ports import BookRepositoryInterface, FileSystemInterface
@@ -40,7 +41,7 @@ class BookFileRepository(BookRepositoryInterface):
     ):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._fs: FileSystemInterface = fs
-        self._connection_string: str = connection_string
+        self._connection_string: str = urljoin(connection_string, "books.data.json")
         if not self._fs.is_file_exists(self._connection_string):
             self._fs.write_file(self._connection_string, "{}")
 
