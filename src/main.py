@@ -1,24 +1,30 @@
 import os
 from pathlib import Path
 
-root_path = Path(os.getcwd())
 
-log_file = root_path / "logs" / "test.log"
-data_file = root_path / "data" / "test.json"
+def main():
+    root_path = Path(os.getcwd())
 
-print("le pod est lancé !")
+    log_file = root_path / "logs" / "test.log"
+    data_file = root_path / "data" / "test.json"
 
-print("tentative d'ecriture dans les volumes montés...")
-with open(log_file, "w") as f:
-    f.write("test d'écriture dans le volume monté")
-print("écriture terminée !")
-with open(data_file, "w") as f:
-    f.write("test d'écriture dans le volume monté")
-print("écriture terminée !")
+    print("le pod est lancé !")
 
-print("suppression des fichiers de test...")
-log_file.unlink()
-data_file.unlink()
-print("fichiers de test supprimés !")
+    print("tentative d'ecriture dans les volumes montés...")
+    with open(log_file, "w") as f:
+        f.write("test d'écriture dans le volume monté")
+    print("écriture terminée !")
+    with open(data_file, "w") as f:
+        f.write("test d'écriture dans le volume monté")
+    print("écriture terminée !")
 
-print("le pod se termine !")
+    print("suppression des fichiers de test...")
+    log_file.unlink()
+    data_file.unlink()
+    print("fichiers de test supprimés !")
+
+    print("le pod se termine !")
+
+
+if __name__ == "__main__":
+    main()

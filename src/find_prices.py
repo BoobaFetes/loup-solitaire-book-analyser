@@ -1,36 +1,39 @@
 import asyncio
 import logging
+from pathlib import Path
 
 from ioc import new_ioc_container, print_environment_variables
-
-# load dependencies
-container = new_ioc_container()
-
-logger = logging.getLogger(__name__)
-logger.info("IOC container initialized")
-
-print_environment_variables(container, logger)
-
-logger.info("IOC : common instances (singleton) created")
-
-# arrange
-book_usecases = container.book_usecases()
 
 
 # action
 async def main():
+    # load dependencies
+    container = new_ioc_container(script_name=Path(__file__).stem)
+
+    logger = logging.getLogger(__name__)
+    logger.info("IOC container initialized")
+
+    print_environment_variables(container, logger)
+
+    # arrange
+    book_list = container.book_list_usecases()
+    book_prices = container.book_price_usecases()
+
     logger.info("Starting find prices process")
-    text = """
-    books = await book_usecases.fetch_prices()
-    logger.info(f"Found {len(books)} books")
+    pre_books = await book_list.list()
+    await book_prices.fetch_prices(pre_books)
+    books = await book_prices.bind_prices_to_books(pre_books)
 
-    for book in books:
-        logger.info(f"Finding prices for book: {book.title}")
-        await book_usecases.fetch_prices(book)
+    logger.info("")
+    logger.info("summary:")
+    sorted_book = sorted(books, key=lambda b: b.numero)
+    for book in sorted_book:
+        logger.info(f" - {book.numero} - {book.titre}:")
+        for price in book.prices:
+            logger.info(f"   - {price}")
 
-    """
-    logger.info(text)
     logger.info("Finished find prices process")
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

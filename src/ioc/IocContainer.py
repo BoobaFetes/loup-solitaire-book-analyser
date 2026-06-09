@@ -6,12 +6,16 @@ from dependency_injector import containers, providers
 
 from adapters import (
     BookFileRepository,
+    BookPriceFileRepository,
+    BrowserAdapter,
     FileSystemAdapter,
     HttpClientAdapter,
 )
-from usecases import BookUseCases
-from usecases.NonOfficialBookUseCases import NonOfficialBookUseCases
-from usecases.OfficialBookUseCases import OfficialBookUseCases
+from adapters.BrowserHandlers.PageHandlerAdapter import PageHandlerAdapter
+from usecases import BookListUseCases, BookPriceUseCases
+from usecases.book_list.NonOfficialBookUseCases import NonOfficialBookUseCases
+from usecases.book_list.OfficialBookUseCases import OfficialBookUseCases
+from usecases.price_sources import AmazonPriceSourceUsecases
 
 
 def _make_logging_handlers(root_dir: str, log_file: str) -> list[Handler]:
@@ -33,7 +37,8 @@ def _make_logging_handlers(root_dir: str, log_file: str) -> list[Handler]:
 class IocContainer(containers.DeclarativeContainer):
     config = providers.Configuration()
 
-    # resources
+    # region resources
+
     logging = providers.Resource(
         basicConfig,
         level=config.log_level,
@@ -46,24 +51,38 @@ class IocContainer(containers.DeclarativeContainer):
         ),
     )
 
-    # adapters (ports implementation)
+    # endregion
+
+    # region adapters (ports implementation)
 
     http_client = providers.Singleton(
         HttpClientAdapter,
         retry_delay=config.api_timeout,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+        },
     )
 
     file_system = providers.Singleton(
         FileSystemAdapter,
         path=config.root_dir,
     )
+    book_price_repository = providers.Singleton(
+        BookPriceFileRepository,
+        fs=file_system,
+        connection_string=config.connection_string,
+    )
     book_repository = providers.Singleton(
         BookFileRepository,
         fs=file_system,
         connection_string=config.connection_string,
+        price_repository=book_price_repository,
     )
+    # endregion
 
-    # usecases
+    # region usecases
+
+    # region book_list usecases
 
     official_book_usecases = providers.Singleton(
         OfficialBookUseCases,
@@ -79,13 +98,41 @@ class IocContainer(containers.DeclarativeContainer):
         parallel_calls=config.api_parallel_calls,
     )
 
-    book_usecases = providers.Singleton(
-        BookUseCases,
+    # endregion
+
+    # region book price usecases
+    browser = providers.Singleton(
+        BrowserAdapter,
+        page_factory=lambda page: PageHandlerAdapter(page),
+        env=config.env,
+    )
+
+    amazon_price_source_usecases = providers.Singleton(
+        AmazonPriceSourceUsecases,
+        url_base="https://www.amazon.fr/",
+        parallel_calls=config.api_parallel_calls,
+    )
+
+    # endregion
+
+    book_list_usecases = providers.Singleton(
+        BookListUseCases,
         repository=book_repository,
         client=http_client,
         official_book=official_book_usecases,
         non_official_book=non_official_book_usecases,
     )
+
+    book_price_usecases = providers.Singleton(
+        BookPriceUseCases,
+        repository=book_price_repository,
+        browser=browser,
+        sources=providers.List(
+            amazon_price_source_usecases,
+        ),
+    )
+
+    # endregion
 
 
 def check_numeric_env_variables(
@@ -99,7 +146,7 @@ def check_numeric_env_variables(
         ) from e
 
 
-def new_ioc_container() -> IocContainer:
+def new_ioc_container(script_name: str) -> IocContainer:
     container = IocContainer()
 
     # load environment variables
@@ -117,6 +164,15 @@ def new_ioc_container() -> IocContainer:
     container.config.connection_string.from_env("CONNECTION_STRING", required=True)
     container.config.log_level.from_env("LOG_LEVEL", default="INFO")
     container.config.log_file.from_env("LOG_FILE", required=True)
+
+    # arrange log file name to include script name for better separation of logs between different scripts
+    log_file = Path(container.config.log_file())
+    container.config.log_file.from_value(
+        str(
+            log_file.parent
+            / f"{log_file.stem}_{script_name.strip('_')}{log_file.suffix}"
+        )
+    )
 
     # environment variables are strings by default, force API timeout to numeric
     api_timeout = check_numeric_env_variables(

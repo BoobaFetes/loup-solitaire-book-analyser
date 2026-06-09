@@ -1,18 +1,19 @@
 import asyncio
+import logging
 import re
 
 from bs4 import BeautifulSoup
 
 from domain import Book
 from ports import BookRepositoryInterface, HttpClientBase
-from usecases.BookUseCasesInterface import BookUseCasesInterface
-from usecases.NonOfficialBookDetails import NonOfficialBookDetails
+from usecases.book_list.NonOfficialBookDetails import NonOfficialBookDetails
 
 
-class NonOfficialBookUseCases(BookUseCasesInterface):
+class NonOfficialBookUseCases:
     """Use cases for managing books."""
 
     _url_base: str = "https://www.bibliotheque-des-aventuriers.com/"
+
     _isbn_matchers = [
         # should match ISBN 13: 978-2-07-064302-7
         re.compile(r"([\d]{3}-[\d]{1}-[\d]{2}-[\d]{6}-[\d]{1})"),
@@ -37,7 +38,9 @@ class NonOfficialBookUseCases(BookUseCasesInterface):
         client: HttpClientBase,
         parallel_calls: int = 5,
     ):
-        super().__init__(repository, client)
+        self._repository = repository
+        self._client = client
+        self._logger = logging.getLogger(self.__class__.__name__)
         self._parallel_calls = parallel_calls
 
     async def fetch_books(self, client: HttpClientBase | None = None) -> list[Book]:
@@ -65,6 +68,11 @@ class NonOfficialBookUseCases(BookUseCasesInterface):
 
         # fetch page content
         html = await client.get_text(index_page_url, "latin-1")
+        if not html:
+            self._logger.warning(
+                f"No HTML content retrieved for index page {index_page_url}"
+            )
+            return []
 
         # parse HTML content to find book detail links
         soup = BeautifulSoup(html, "html.parser")
@@ -91,6 +99,10 @@ class NonOfficialBookUseCases(BookUseCasesInterface):
 
             active_client = client or self._client
             html = await active_client.get_text(url, "latin-1")
+            if not html:
+                self._logger.warning(f"No HTML content retrieved for book URL {url}")
+                return None
+
             soup = BeautifulSoup(html, "html.parser")
 
             details = NonOfficialBookDetails(soup)

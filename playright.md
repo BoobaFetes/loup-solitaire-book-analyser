@@ -1,0 +1,10 @@
+- doc : <https://playwright.dev/python/docs/intro>
+- tuto :
+  - blocage volontaires : <https://www.youtube.com/watch?v=sOAZpHDEdkg&t=17443s>
+  - blocage par Rate Limite : <https://www.youtube.com/watch?v=sOAZpHDEdkg&t=17524s> (limitation de requêtes)
+  - blocage par user-agent: <https://www.youtube.com/watch?v=sOAZpHDEdkg&t=17958s>
+    - amazon crash si user-agent pas présent ou pas réaliste - DONE
+  - playright :
+    - presentation : <https://www.youtube.com/watch?v=sOAZpHDEdkg&t=18295s>
+    - installation et utilisation (pour affichage avec JS) : <https://www.youtube.com/watch?v=sOAZpHDEdkg&t=18646s>
+    - interaction avec le DOM : <https://www.youtube.com/watch?v=sOAZpHDEdkg&t=19214s>
