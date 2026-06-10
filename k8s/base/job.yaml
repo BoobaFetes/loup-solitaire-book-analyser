@@ -4,6 +4,7 @@ metadata:
   name: lsba-find-books-job
   namespace: lsba-ns # patched by overlay
 spec:
+  backoffLimit: 2 # 2 tentatives max en cas d'echec
   template:
     metadata: {}
     spec:
@@ -12,7 +13,7 @@ spec:
           persistentVolumeClaim:
             claimName: lsba-pvc
       containers:
-        - image: loup-solitaire-book-analyser:v0.1.0
+        - image: loup-solitaire-book-analyser:v0.1.1
           name: lsba-find-books
           args: ["src/find_books.py"]
           envFrom:
@@ -33,7 +34,7 @@ spec:
             requests:
               memory: "64Mi"
               cpu: "50m"
-      restartPolicy: OnFailure
+      restartPolicy: Never # on veut un nouveau pod en cas d'echec pour analyser les erreurs (tous les logs ne vont pas forcément dans les fichers logs du PVC)
 ---
 apiVersion: batch/v1
 kind: Job
@@ -41,6 +42,7 @@ metadata:
   name: lsba-find-prices-job
   namespace: lsba-ns # patched by overlay
 spec:
+  backoffLimit: 2 # 2 tentatives max en cas d'echec  
   template:
     metadata: {}
     spec:
@@ -48,8 +50,16 @@ spec:
         - name: project-volume
           persistentVolumeClaim:
             claimName: lsba-pvc # patched by overlay
+      initContainers:
+          # container d'attente pour éviter les conflits d'accès au PVC avec le job find_books, le plus simple est d'utiliser un timer car on connait le temps max) à l'execution de find_books.py
+        - image: alpine
+          name: wait-for-find-books-ends
+          command: 
+          - "sh"
+          - "-c"
+          - "sleep 70"
       containers:
-        - image: loup-solitaire-book-analyser:v0.1.0
+        - image: loup-solitaire-book-analyser:v0.1.1
           name: lsba-find-prices
           args: ["src/find_prices.py"]
           envFrom:
@@ -65,9 +75,11 @@ spec:
               subPath: logs
           resources:
             limits:
-              memory: "128Mi"
-              cpu: "100m"
+              # playwright semble au max avoir besoin de ~800Mi de mémoire et ~1.6 de cpu
+              memory: "1Gi"
+              cpu: "2"
             requests:
-              memory: "64Mi"
-              cpu: "50m"
-      restartPolicy: OnFailure
+              # playwright necessite au moins 500Mi de mémoire et ~0.5 cpu au min
+              memory: "500Mi"
+              cpu: "0.5"
+      restartPolicy: Never # on veut un nouveau pod en cas d'echec pour analyser les erreurs (tous les logs ne vont pas forcément dans les fichers logs du PVC)
