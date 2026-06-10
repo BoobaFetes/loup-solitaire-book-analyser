@@ -89,12 +89,6 @@ loup-solitaire-book-analyser
    playwright install chromium
    ```
 
-   **[RESTE A PROUVER]** For linux distribution with missing dependencies, you can use the following command to install the necessary dependencies along with the browser:
-
-   ```bash
-   playwright install --with-deps chrome
-   ```
-
 ---
 
 ## Running the Application
