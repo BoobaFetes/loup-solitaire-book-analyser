@@ -1,5 +1,5 @@
 import logging
-from typing import Generic
+from typing import Generic, Literal
 
 from ports.BrowserHandlers import HtmlElementActionInterface
 from ports.BrowserHandlers.types import TBrowser, TElement, TPage
@@ -13,11 +13,19 @@ class PageHandlerInterface(Generic[TBrowser, TPage, TElement]):
         self.action = action
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    async def goto(self, url: str) -> None:
+    async def goto(
+        self,
+        url: str,
+        *,
+        wait_until: Literal["commit", "load", "domcontentloaded"] = "domcontentloaded",
+        timeout: int = 10000,
+    ) -> None:
         """Navigate to a specific URL.
 
         Args:
             url (str): The URL to navigate to.
+            wait_until (Literal["commit", "load", "domcontentloaded"]): When to consider navigation succeeded.
+            timeout (int): The maximum time to wait for the page to load, in milliseconds. (default is 10 seconds - 10k ms)
 
         Raises:
             NotImplementedError: If the method is not implemented in a subclass.

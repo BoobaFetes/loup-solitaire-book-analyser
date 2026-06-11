@@ -36,13 +36,23 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
         page = await browser.new_page(self.url_base, context_index)
 
         # search for the book using the isbn
-        # await page.action.wait_for("#twotabsearchtextbox")
+        await page.action.wait_for("#twotabsearchtextbox", state="visible")
+
         await page.action.set_value("#twotabsearchtextbox", book.isbn)
         await page.action.click("#nav-search-submit-button")
 
-        # waiting for the search results to load and display the results
-        book_element = await page.action.get_by_text(book.titre)
-        await page.action.wait_element(book_element)
+        # waiting for the search results to load and display the expected book
+        if not await page.action.wait_for(
+            'div[role="listitem"] div[data-cy="title-recipe"] h2',
+            state="visible",
+            has_text=book.titre,
+        ):
+            self._logger.info(
+                f"Book n°{book.numero} {book.titre} ({book.isbn}) not found on Amazon"
+            )
+            await page.close()
+            return None
+       
 
         html = await page.html()
         close_page_action = page.close()
