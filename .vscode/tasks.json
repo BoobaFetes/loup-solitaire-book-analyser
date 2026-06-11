@@ -3,32 +3,20 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "check typings: find_books.py",
+      "label": "check typings",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/Scripts/pyright.exe",
-      "args": ["${workspaceFolder}/src/find_books.py"],
-      "presentation": {
-        "reveal": "always",
-        "clear": true
+      "args": ["${workspaceFolder}/src"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
       },
-      "problemMatcher": {
-        "owner": "pyright",
-        "fileLocation": "absolute",
-        "pattern": {
-          "regexp": "^(.*):(\\d+):(\\d+) - (error|warning|information): (.*)$",
-          "file": 1,
-          "line": 2,
-          "column": 3,
-          "severity": 4,
-          "message": 5
-        }
-      }
-    },
-    {
-      "label": "check typings: find_prices.py",
-      "type": "shell",
-      "command": "${workspaceFolder}/.venv/Scripts/pyright.exe",
-      "args": ["${workspaceFolder}/src/find_prices.py"],
+      "linux": {
+        "command": "${workspaceFolder}/.venv/bin/pyright"
+      },
+      "osx": {
+        "command": "${workspaceFolder}/.venv/bin/pyright"
+      },
       "presentation": {
         "reveal": "always",
         "clear": true

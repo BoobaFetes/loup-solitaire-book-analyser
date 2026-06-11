@@ -8,7 +8,7 @@
       "python": "${workspaceFolder}/.venv/Scripts/python.exe",
       "program": "${workspaceFolder}/src/find_books.py",
       "console": "integratedTerminal",
-      "preLaunchTask": "check typings: find_books.py",
+      "preLaunchTask": "check typings",
       "justMyCode": true,
       "envFile": "${workspaceFolder}/.env"
     },
@@ -19,7 +19,7 @@
       "python": "${workspaceFolder}/.venv/Scripts/python.exe",
       "program": "${workspaceFolder}/src/find_prices.py",
       "console": "integratedTerminal",
-      "preLaunchTask": "check typings: find_prices.py",
+      "preLaunchTask": "check typings",
       "justMyCode": true,
       "envFile": "${workspaceFolder}/.env"
     },
