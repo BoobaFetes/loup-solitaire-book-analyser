@@ -19,6 +19,8 @@ from usecases.book_list.NonOfficialBookUseCases import NonOfficialBookUseCases
 from usecases.book_list.OfficialBookUseCases import OfficialBookUseCases
 from usecases.price_sources import AmazonPriceSourceUsecases
 
+DEFAULT_BROWSER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+
 
 def _make_logging_handlers(root_dir: str, log_file: str) -> list[Handler]:
     log_path = (Path(root_dir) / log_file).resolve()
@@ -60,9 +62,7 @@ class IocContainer(containers.DeclarativeContainer):
     http_client = providers.Singleton(
         HttpClientAdapter,
         retry_delay=config.api_timeout,
-        headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
-        },
+        headers=providers.Dict({"User-Agent": config.browser_user_agent}),
     )
 
     file_system = providers.Singleton(
@@ -107,12 +107,29 @@ class IocContainer(containers.DeclarativeContainer):
         BrowserAdapter,
         page_factory=lambda page: PageHandlerAdapter(page),
         headless=config.headless,
+        args=[
+            "--disable-dev-shm-usage",
+        ],
+        browser_context_options=providers.Dict(
+            user_agent=config.browser_user_agent,
+            viewport=providers.Dict(
+                width=config.browser_viewport_width,
+                height=config.browser_viewport_height,
+            ),
+            locale=config.browser_locale,
+            timezone_id=config.browser_timezone,
+            extra_http_headers=providers.Dict(
+                {"Accept-Language": config.browser_accept_language}
+            ),
+            java_script_enabled=True,
+        ),
     )
 
     amazon_price_source_usecases = providers.Singleton(
         AmazonPriceSourceUsecases,
         url_base="https://www.amazon.fr/",
         parallel_calls=config.api_parallel_calls,
+        request_delay_seconds=config.amazon_request_delay_seconds,
     )
 
     # endregion
@@ -198,6 +215,37 @@ def new_ioc_container(script_name: str) -> IocContainer:
         name="HEADLESS",
         default=False,
     )
+    container.config.browser_user_agent.from_env(
+        "BROWSER_USER_AGENT",
+        default=DEFAULT_BROWSER_USER_AGENT,
+    )
+    convert_env_variables_as(
+        wanted_type=int,
+        config=container.config.browser_viewport_width,
+        name="BROWSER_VIEWPORT_WIDTH",
+        default=1920,
+    )
+    convert_env_variables_as(
+        wanted_type=int,
+        config=container.config.browser_viewport_height,
+        name="BROWSER_VIEWPORT_HEIGHT",
+        default=1080,
+    )
+    container.config.browser_locale.from_env("BROWSER_LOCALE", default="fr-FR")
+    container.config.browser_timezone.from_env(
+        "BROWSER_TIMEZONE",
+        default="Europe/Paris",
+    )
+    container.config.browser_accept_language.from_env(
+        "BROWSER_ACCEPT_LANGUAGE",
+        default="fr-FR,fr;q=0.9,en;q=0.8",
+    )
+    convert_env_variables_as(
+        wanted_type=float,
+        config=container.config.amazon_request_delay_seconds,
+        name="AMAZON_REQUEST_DELAY_SECONDS",
+        default=1.0,
+    )
 
     # arrange log file name to include script name for better separation of logs between different scripts
     convert_env_variables_as_path(
@@ -247,6 +295,19 @@ def print_environment_variables(container: IocContainer, logger: Logger):
         ("CONNECTION_STRING", container.config.connection_string()),
         ("LOG_LEVEL", container.config.log_level()),
         ("LOG_FILE", container.config.log_file()),
+        ("HEADLESS", container.config.headless()),
+        ("BROWSER_USER_AGENT", container.config.browser_user_agent()),
+        (
+            "BROWSER_VIEWPORT",
+            f"{container.config.browser_viewport_width()}x{container.config.browser_viewport_height()}",
+        ),
+        ("BROWSER_LOCALE", container.config.browser_locale()),
+        ("BROWSER_TIMEZONE", container.config.browser_timezone()),
+        ("BROWSER_ACCEPT_LANGUAGE", container.config.browser_accept_language()),
+        (
+            "AMAZON_REQUEST_DELAY_SECONDS",
+            container.config.amazon_request_delay_seconds(),
+        ),
     ]
     logger.info("environment variables:")
     for key, value in variables:

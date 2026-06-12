@@ -16,6 +16,30 @@ class HtmlElementActionAdapter(HtmlElementActionInterface[TPage, TElement]):
         )
         self._retry_action = RetryAction(self._logger)
 
+    async def __page_diagnostic(self, html: str) -> str:
+        markers = {
+            "captcha": "captcha",
+            "robot": "robot",
+            "sorry": "sorry",
+            "desole": "désolé",
+            "automated": "automated",
+            "automatique": "automatique",
+            "api_services_support": "api-services-support",
+        }
+        lower_html = html.lower()
+        detected_markers = [
+            name for name, marker in markers.items() if marker in lower_html
+        ]
+        try:
+            title = await self._page.title()
+        except Exception:
+            title = "not available"
+
+        return (
+            f"url={self._page.url!r}, title={title!r}, "
+            f"markers={detected_markers or ['none']}"
+        )
+
     async def querySelector(self, css: str) -> TElement:
         """Get the first element matching a CSS selector.
         Args:
@@ -80,12 +104,14 @@ class HtmlElementActionAdapter(HtmlElementActionInterface[TPage, TElement]):
             return True
 
         async def on_failure_fn(e: Exception) -> bool:
+            html = await self._page.content()
+            diagnostic = await self.__page_diagnostic(html)
             self._logger.error(
-                f"Error while waiting for {details}: {e}",
+                f"Error while waiting for {details}: {e}. Page diagnostic: {diagnostic}",
                 exc_info=True,
             )
             await self.__html_file_backup.save(
-                html=await self._page.content(),
+                html=html,
                 filename_pattern=lambda counter: f"wait_for_{counter}",
                 log_message=lambda path: f"saving page for {details} in '{path}'",
             )
