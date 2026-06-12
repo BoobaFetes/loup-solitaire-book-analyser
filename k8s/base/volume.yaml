@@ -17,14 +17,14 @@ spec:
     storage: 1Mi
   hostPath:
     path: /mnt/volumes/lsba/dev
-  claimRef: # patched by overlay
+  claimRef:
     name: lsba-pvc # patched by overlay
     namespace: lsba-ns # patched by overlay
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: lsba-pvc # patched by overlay
+  name: lsba-pvc
   namespace: lsba-ns # patched by overlay
 spec:
   storageClassName: lsba-sc # patched by overlay
