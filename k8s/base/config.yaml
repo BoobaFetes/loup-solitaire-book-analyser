@@ -4,9 +4,17 @@ metadata:
   name: lsba-cm # patched by overlay
   namespace: lsba-ns # patched by overlay
 data:
+  # not necessary -> ENV: prod
   # not necessary -> ROOT_DIR: /app
   API_TIMEOUT: "1.0"
-  API_PARALLEL_CALLS: "6"
+  API_PARALLEL_CALLS: "2"
   CONNECTION_STRING: data/
   LOG_FILE: logs/app.log
   LOG_LEVEL: INFO
+  HEADLESS: "true"
+  BROWSER_VIEWPORT_WIDTH: "1920"
+  BROWSER_VIEWPORT_HEIGHT: "1080"
+  BROWSER_LOCALE: fr-FR
+  BROWSER_TIMEZONE: Europe/Paris
+  BROWSER_ACCEPT_LANGUAGE: fr-FR,fr;q=0.9,en;q=0.8
+  AMAZON_REQUEST_DELAY_SECONDS: "1.0"

@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Any, Callable
 
 from playwright.async_api import Browser, async_playwright
 
@@ -17,17 +17,21 @@ class BrowserAdapter(BrowserInterface[TBrowser, TPage, TElement]):
         page_factory: Callable[
             [TPage], PageHandlerInterface[TBrowser, TPage, TElement]
         ],
+        browser_context_options: dict[str, Any] | None = None,
         **kwargs,
     ):
         super().__init__()
         self._page_factory = page_factory
         self.browser: Browser = None  # type: ignore
         self.__options = kwargs
+        self.__context_options = browser_context_options or {}
 
     async def __aenter__(self):
         self.__context_manager = async_playwright()
         self.__playwright = await self.__context_manager.start()
         self.browser = await self.__playwright.chromium.launch(**self.__options)
+        self._logger.info("Browser launch options: %s", self.__options)
+        self._logger.info("Browser context options: %s", self.__context_options)
         self.browser.on(
             "context", lambda browser: self._logger.info("Browser connected")
         )
@@ -49,7 +53,7 @@ class BrowserAdapter(BrowserInterface[TBrowser, TPage, TElement]):
 
     async def new_context(self) -> int:
         index = len(self.browser.contexts)
-        await self.browser.new_context()
+        await self.browser.new_context(**self.__context_options)
         return index
 
     async def new_page(

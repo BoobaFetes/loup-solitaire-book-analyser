@@ -32,6 +32,22 @@ class PageHandlerInterface(Generic[TBrowser, TPage, TElement]):
         """
         raise NotImplementedError("PageHandlerInterface does not implement goto method")
 
+    async def wait_for_url_change(self, previous_url: str, timeout: int = 10000) -> bool:
+        """Wait until the current page URL changes."""
+        raise NotImplementedError(
+            "PageHandlerInterface does not implement wait_for_url_change"
+        )
+
+    async def current_url(self) -> str:
+        """Get the current page URL."""
+        raise NotImplementedError(
+            "PageHandlerInterface does not implement current_url"
+        )
+
+    async def title(self) -> str:
+        """Get the current page title."""
+        raise NotImplementedError("PageHandlerInterface does not implement title")
+
     async def close(self) -> None:
         """Close the page.
 

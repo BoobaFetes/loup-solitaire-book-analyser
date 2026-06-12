@@ -9,6 +9,15 @@ from usecases.price_sources.PriceSourceUsecasesBase import PriceSourceUsecasesBa
 
 
 class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
+    def __init__(
+        self,
+        url_base: str,
+        parallel_calls: int = 5,
+        request_delay_seconds: float = 1.0,
+    ):
+        super().__init__(url_base, parallel_calls)
+        self.__request_delay_seconds = request_delay_seconds
+
     @staticmethod
     def __normalize_title_by_regexp_pattern(title: str) -> re.Pattern[str]:
         apostrophes = "'’‘ʼ`´"
@@ -31,7 +40,10 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
         results: list[BookPrice] = []
 
         self._logger.info(f"searching book prices for {len(books)} books")
-        for book in books:
+        for index, book in enumerate(books):
+            if index > 0 and self.__request_delay_seconds > 0:
+                await asyncio.sleep(self.__request_delay_seconds)
+
             self._logger.info(
                 f"searching book price for n°{book.numero} {book.titre} ({book.isbn})"
             )
@@ -48,12 +60,20 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
         context_index: int = 0,
     ) -> BookPrice | None:
         page = await browser.new_page(self.url_base, context_index)
+        self._logger.info("Amazon home loaded: %s", await page.current_url())
 
         # search for the book using the isbn
         await page.action.wait_for("#twotabsearchtextbox", state="visible")
 
+        previous_url = await page.current_url()
         await page.action.set_value("#twotabsearchtextbox", book.isbn)
         await page.action.click("#nav-search-submit-button")
+        await page.wait_for_url_change(previous_url)
+        self._logger.info(
+            "Amazon search page loaded for ISBN %s: %s",
+            book.isbn,
+            await page.current_url(),
+        )
 
         # waiting for the search results to load and display the expected book
         if not await page.action.wait_for(
