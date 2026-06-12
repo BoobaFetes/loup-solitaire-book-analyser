@@ -1,6 +1,8 @@
 import os
+from collections.abc import Callable
 from logging import Handler, Logger, StreamHandler, basicConfig, handlers
 from pathlib import Path
+from typing import TypeVar, cast
 
 from dependency_injector import containers, providers
 
@@ -104,7 +106,7 @@ class IocContainer(containers.DeclarativeContainer):
     browser = providers.Singleton(
         BrowserAdapter,
         page_factory=lambda page: PageHandlerAdapter(page),
-        env=config.env,
+        headless=config.headless,
     )
 
     amazon_price_source_usecases = providers.Singleton(
@@ -135,15 +137,40 @@ class IocContainer(containers.DeclarativeContainer):
     # endregion
 
 
-def check_numeric_env_variables(
-    wanted_type: type, value: str, variable_name: str
-) -> int | float | None:
-    try:
-        return wanted_type(value)
-    except (TypeError, ValueError) as e:
-        raise ValueError(
-            f"{variable_name} must be a {wanted_type.__name__}. Value provided: {value}"
-        ) from e
+TConvertedType = TypeVar("TConvertedType", int, float, bool)
+
+
+def convert_env_variables_as(
+    wanted_type: type[TConvertedType],
+    config: providers.ConfigurationOption,
+    name: str,
+    default: TConvertedType | None = None,
+    required: bool = False,
+) -> TConvertedType | None:
+    config.from_env(name, default=default, required=required)
+    value = config()
+    converted_value = (
+        cast(TConvertedType, value.lower() in ("true", "1"))
+        if wanted_type is bool
+        else wanted_type(value)
+    )
+    config.from_value(converted_value)
+    return converted_value
+
+
+def convert_env_variables_as_path(
+    config: providers.ConfigurationOption,
+    name: str,
+    value_fn: Callable[[Path], str],
+    required: bool = False,
+    default: str | None = None,
+) -> str:
+    config.from_env(name, default=default, required=required)
+    value = config()
+    file = Path(value)
+    converted_value = value_fn(file)
+    config.from_value(converted_value)
+    return converted_value
 
 
 def new_ioc_container(script_name: str) -> IocContainer:
@@ -159,30 +186,39 @@ def new_ioc_container(script_name: str) -> IocContainer:
 
     # bind configuration values
     container.config.root_dir.from_env("ROOT_DIR", default=os.getcwd())
-    container.config.api_timeout.from_env("API_TIMEOUT", default=0.5)
-    container.config.api_parallel_calls.from_env("API_PARALLEL_CALLS", default=2)
     container.config.connection_string.from_env("CONNECTION_STRING", required=True)
     container.config.log_level.from_env("LOG_LEVEL", default="INFO")
-    container.config.log_file.from_env("LOG_FILE", required=True)
+
+    convert_env_variables_as(
+        wanted_type=bool,
+        config=container.config.headless,
+        name="HEADLESS",
+        default=False,
+    )
 
     # arrange log file name to include script name for better separation of logs between different scripts
-    log_file = Path(container.config.log_file())
-    container.config.log_file.from_value(
-        str(
-            log_file.parent
-            / f"{log_file.stem}_{script_name.strip('_')}{log_file.suffix}"
-        )
+    convert_env_variables_as_path(
+        config=container.config.log_file,
+        name="LOG_FILE",
+        required=True,
+        value_fn=lambda path: str(
+            path.parent / f"{path.stem}_{script_name.strip('_')}{path.suffix}"
+        ),
     )
 
     # environment variables are strings by default, force API timeout to numeric
-    api_timeout = check_numeric_env_variables(
-        float, container.config.api_timeout(), "API_TIMEOUT"
+    convert_env_variables_as(
+        wanted_type=float,
+        config=container.config.api_timeout,
+        name="API_TIMEOUT",
+        default=0.5,
     )
-    container.config.api_timeout.from_value(api_timeout)
-    api_parallel_calls = check_numeric_env_variables(
-        int, container.config.api_parallel_calls(), "API_PARALLEL_CALLS"
+    convert_env_variables_as(
+        wanted_type=int,
+        config=container.config.api_parallel_calls,
+        name="API_PARALLEL_CALLS",
+        default=2,
     )
-    container.config.api_parallel_calls.from_value(api_parallel_calls)
 
     # check values
     root_dir = Path(container.config.root_dir())
