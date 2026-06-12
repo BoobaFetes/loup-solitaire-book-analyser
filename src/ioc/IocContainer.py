@@ -150,7 +150,10 @@ def convert_env_variables_as(
     config.from_env(name, default=default, required=required)
     value = config()
     converted_value = (
-        cast(TConvertedType, value.lower() in ("true", "1"))
+        cast(
+            TConvertedType,
+            value if isinstance(value, bool) else value.lower() in ("true", "1"),
+        )
         if wanted_type is bool
         else wanted_type(value)
     )
@@ -240,6 +243,7 @@ def print_environment_variables(container: IocContainer, logger: Logger):
         ("ENV", os.getenv("ENV", "dev")),
         ("ROOT_DIR", container.config.root_dir()),
         ("API_TIMEOUT", container.config.api_timeout()),
+        ("API_PARALLEL_CALLS", container.config.api_parallel_calls()),
         ("CONNECTION_STRING", container.config.connection_string()),
         ("LOG_LEVEL", container.config.log_level()),
         ("LOG_FILE", container.config.log_file()),
