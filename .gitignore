@@ -30,11 +30,13 @@ ENV/
 *.njsproj
 *.sln
 
-# pytest / coverage
+# pytest / ruff / coverage
 .pytest_cache/
+.ruff_cache/
 .coverage
 /coverage.*
 htmlcov/
+
 
 # mypy
 .mypy_cache/
@@ -42,5 +44,6 @@ htmlcov/
 # Jupyter
 .ipynb_checkpoints/
 
+# apps repository (logs and data used in prod too)
 logs/
 data/
