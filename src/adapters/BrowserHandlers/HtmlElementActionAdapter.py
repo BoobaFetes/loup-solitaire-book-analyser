@@ -1,77 +1,9 @@
-from collections.abc import Awaitable, Callable
-from logging import Logger
-from typing import Generic, Literal, TypeVar
+from typing import Literal
 
 from adapters.BrowserHandlers.types import TElement, TPage
+from adapters.HtmlFileBackup import HtmlFileBackup
+from adapters.RetryAction import RetryAction
 from ports.BrowserHandlers import HtmlElementActionInterface
-
-
-class HtmlFileBackup:
-    __html_file_counter: int = 0
-
-    def __init__(self, logger):
-        import os
-        from pathlib import Path
-
-        self._logger = logger
-        self.directory = Path(os.getcwd()) / "logs/html"
-        self.directory.mkdir(exist_ok=True)
-
-    async def save(
-        self,
-        *,
-        filename_pattern: Callable[[int], str],
-        log_message: Callable[[str], str | None],
-        html: str,
-    ) -> None:
-        HtmlFileBackup.__html_file_counter += 1
-        filename = filename_pattern(HtmlFileBackup.__html_file_counter)
-
-        path = f"./logs/html/{filename}.html"
-        msg = log_message(path)
-        if msg:
-            self._logger.info(msg)
-
-        file = self.directory / f"{filename}.html"
-        with file.open("w", encoding="utf-8") as f:
-            f.write(html)
-
-
-TExecuteResult = TypeVar("TExecuteResult")
-
-
-class RetryAction(Generic[TExecuteResult]):
-    def __init__(self, logger: Logger):
-        self.__logger = logger
-
-    async def execute(
-        self,
-        action: Callable[[], Awaitable[TExecuteResult]],
-        on_failure: Callable[[Exception], Awaitable[TExecuteResult]],
-        retry_message: Callable[[int], str] | None = None,
-        use_error_log: bool = True,
-        retry: int = 3,
-    ) -> TExecuteResult:
-        if not retry_message:
-            retry_message = lambda r: f"Action failed. Retrying... ({r} retries left)"  # noqa: E731
-
-        try:
-            return await action()
-        except Exception as e:
-            if retry > 0:
-                self.__logger.warning(retry_message(retry))
-                return await self.execute(
-                    action,
-                    on_failure=on_failure,
-                    retry_message=retry_message,
-                    use_error_log=use_error_log,
-                    retry=retry - 1,
-                )
-
-            if use_error_log:
-                self.__logger.error(f"Action failed after retries: {e}", exc_info=True)
-
-            return await on_failure(e)
 
 
 class HtmlElementActionAdapter(HtmlElementActionInterface[TPage, TElement]):
