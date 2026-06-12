@@ -51,7 +51,8 @@ spec:
           persistentVolumeClaim:
             claimName: lsba-pvc # patched by overlay
       initContainers:
-          # container d'attente pour éviter les conflits d'accès au PVC avec le job find_books, le plus simple est d'utiliser un timer car on connait le temps max) à l'execution de find_books.py
+          # pour les tests, il faut un container d'attente pour conserver la logique : on récupère les livre et ensuite on recherche leurs prix
+          # le plus simple est d'utiliser un timer car on connait le temps d'execution de find_books.py
         - image: alpine
           name: wait-for-find-books-ends
           command: 

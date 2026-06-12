@@ -4,8 +4,8 @@ metadata:
   name: lsba-find-books-cronjob
   namespace: lsba-ns # patched by overlay
 spec:
-  # attention au temps prix sur ce job !! find_prices dépend du meme PVC !
-  schedule: "0 0 1 * *" # tous les 1er du mois à minuit (soit 10 min avant find_prices pour éviter les conflits sur le PVC)
+  # attention, le temps est en zoulu time en dev (docker-desktop) !
+  schedule: "5 22 * * *" # tous les jours à minuit:05 (UTC+02)
   jobTemplate:
     metadata:
       name: lsba-find-books-job
@@ -48,7 +48,7 @@ metadata:
   name: lsba-find-prices-cronjob
   namespace: lsba-ns # patched by overlay
 spec:
-  schedule: "10 0 * * *" # chaque jour à 00:10
+  schedule: "7 22 * * *" # chaque jour à 00:07 UTC+02 (soit deux minutes après find_books - histoire de conserver la logique)
   jobTemplate:
     metadata:
       name: lsba-find-prices-job
@@ -61,14 +61,6 @@ spec:
             - name: project-volume
               persistentVolumeClaim:
                 claimName: lsba-pvc # patched by overlay
-          initContainers:
-            # container d'attente pour éviter les conflits d'accès au PVC avec le job find_books, le plus simple est d'utiliser un timer car on connait le temps max) à l'execution de find_books.py
-            - image: alpine
-              name: wait-for-find-books-ends
-              command: 
-              - "sh"
-              - "-c"
-              - "sleep 70"
           containers:
             - image: loup-solitaire-book-analyser:v0.1.2
               name: lsba-find-prices
