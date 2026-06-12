@@ -1,14 +1,27 @@
-import asyncio
-import traceback
 from typing import Literal
 
 from adapters.BrowserHandlers.types import TElement, TPage
+from adapters.HtmlFileBackup import HtmlFileBackup
+from adapters.RetryAction import RetryAction
 from ports.BrowserHandlers import HtmlElementActionInterface
 
 
 class HtmlElementActionAdapter(HtmlElementActionInterface[TPage, TElement]):
-    def __init__(self, page: TPage):
+    def __init__(self, page: TPage, html_file_backup: HtmlFileBackup | None = None):
         super().__init__(page)
+        self.__html_file_backup = (
+            html_file_backup
+            if html_file_backup is not None
+            else HtmlFileBackup(self._logger)
+        )
+        self._retry_action = RetryAction(self._logger)
+
+    @staticmethod
+    def __selector_description(selector: str, state: str | None, kwargs: dict) -> str:
+        details = f"selector '{selector}' in state '{state}'"
+        if kwargs:
+            details += f" with options {kwargs!r}"
+        return details
 
     async def querySelector(self, css: str) -> TElement:
         """Get the first element matching a CSS selector.
@@ -39,125 +52,62 @@ class HtmlElementActionAdapter(HtmlElementActionInterface[TPage, TElement]):
         elements = self._page.locator(css)
         return await elements.all()
 
-    async def get_by_text(self, text: str) -> TElement:
-        """Get the first element matching the given text.
-
-        Args:
-            text (str): The text to match the element.
-
-        Raises:
-            NotImplementedError: If the method is not implemented in a subclass.
-
-        Returns:
-            TElement: The first element matching the text.
-        """
-        element = self._page.get_by_text(text)
-        return element.first
-
-    async def wait_element(
-        self,
-        element: TElement,
-        *,
-        timeout: float | None = 5.0,
-        state: Literal["attached", "detached", "hidden", "visible"] | None = "attached",
-    ) -> bool:
-        """Wait for an element to reach a specific state.
-
-        Args:
-            element (TElement): The element to wait for.
-            timeout (float | None, optional): The maximum time to wait in seconds. Defaults to 5 seconds.
-            state (Literal["attached", "detached", "hidden", "visible"] | None, optional): The state to wait for. Defaults to "attached".
-
-        Returns:
-            bool: True if the element reached the desired state within the timeout, False otherwise.
-        """
-        try:
-            await element.wait_for(timeout=self.__convert_in_ms(timeout), state=state)
-            return True
-        except Exception as e:
-            self._logger.error(
-                f"Error while waiting for element {element}: {e}",
-                exc_info=True,
-            )
-            return False
-
     async def wait_for(
         self,
         selector: str,
         *,
-        timeout: float | None = 5.0,
-        state: Literal["attached", "detached", "hidden", "visible"] | None = "attached",
+        retry: int = 3,
+        timeout: float | None = 10.0,
+        state: Literal["attached", "detached", "hidden", "visible"] | None = "visible",
+        **kwargs,
     ) -> bool:
         """Wait for an element matching a CSS selector to reach a specific state.
 
         Args:
             selector (str): The CSS selector to match the element.
-            timeout (float | None, optional): The maximum time to wait in seconds. Defaults to 5 seconds.
-            state (Literal["attached", "detached", "hidden", "visible"] | None, optional): The state to wait for. Defaults to "attached".
+            retry (int, optional): The number of times to retry the search. Defaults to 3.
+            timeout (float | None, optional): The maximum time to wait in seconds. Defaults to 10 seconds.
+            state (Literal["attached", "detached", "hidden", "visible"] | None, optional): The state to wait for. Defaults to "visible".
+            **kwargs: Additional keyword arguments to pass to the underlying implementation.
 
         Returns:
             bool: True if the element reached the desired state within the timeout, False otherwise.
         """
-        element = self._page.locator(selector)
-        if not element:
-            self._logger.error(f"No element found for selector: {selector}")
-            return False
 
-        try:
-            await element.wait_for(timeout=self.__convert_in_ms(timeout), state=state)
-        except Exception as e:
+        async def action_fn() -> bool:
+            element = self._page.locator(selector, **kwargs).first
+            await element.wait_for(
+                state=state,
+                timeout=None if timeout is None else int(timeout * 1000),
+            )
+            return True
+
+        async def on_failure_fn(e: Exception) -> bool:
+            selector_description = self.__selector_description(selector, state, kwargs)
             self._logger.error(
-                f"Error while waiting for element {selector}: {e}",
+                f"Error while waiting for {selector_description}: {e}",
                 exc_info=True,
+            )
+            await self.__html_file_backup.save(
+                html=await self._page.content(),
+                filename_pattern=lambda counter: f"wait_for_{counter}",
+                log_message=lambda path: (
+                    f"saving page for {selector_description} in '{path}'"
+                ),
             )
             return False
 
-        return True
-
-    async def wait_for_many(
-        self,
-        selectors: list[str],
-        *,
-        timeout: float | None = 5.0,
-        state: Literal["attached", "detached", "hidden", "visible"] | None = "attached",
-    ) -> bool:
-        """Wait for multiple elements matching CSS selectors to reach a specific state.
-
-        Args:
-            selectors (list[str]): The CSS selectors to match the elements.
-            timeout (float | None, optional): The maximum time to wait in seconds. Defaults to 5 seconds.
-            state (Literal["attached", "detached", "hidden", "visible"] | None, optional): The state to wait for. Defaults to "attached".
-
-        Returns:
-            bool: True if all elements reached the desired state within the timeout, False otherwise.
-        """
-        valid_selectors = [s for s in selectors if s]
-        if not valid_selectors:
-            return False
-
-        elements = [self._page.locator(selector) for selector in valid_selectors]
-        exceptions = await asyncio.gather(
-            *[
-                element.wait_for(timeout=self.__convert_in_ms(timeout), state=state)
-                for element in elements
-            ],
-            return_exceptions=True,
+        retry_action = RetryAction[bool](self._logger)
+        return await retry_action.execute(
+            action=action_fn,
+            on_failure=on_failure_fn,
+            retry_message=lambda r: (
+                f"Element with {self.__selector_description(selector, state, kwargs)} "
+                f"not found. Retrying... ({r} retries left)"
+            ),
+            use_error_log=False,
+            retry=retry,
         )
-
-        fails = any(e is not None for e in exceptions)
-        if fails:
-            msgs = ["Errors while waiting for elements: "]
-            for i, exc in [(i, exc) for i, exc in enumerate(exceptions) if exc]:
-                tb = "".join(
-                    traceback.format_exception(type(exc), exc, exc.__traceback__)
-                )
-                msgs.append(f" {i}. {valid_selectors[i]} : {tb}")
-            self._logger.error("\n".join(msgs))
-
-        return not fails
-
-    def __convert_in_ms(self, timeout: float | None) -> int | None:
-        return None if timeout is None else int(timeout * 1000)
 
     async def get_value(
         self,
