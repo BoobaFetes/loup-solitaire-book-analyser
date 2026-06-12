@@ -1,25 +1,95 @@
-from typing import Literal
+from collections.abc import Awaitable, Callable
+from logging import Logger
+from typing import Generic, Literal, TypeVar
 
 from adapters.BrowserHandlers.types import TElement, TPage
 from ports.BrowserHandlers import HtmlElementActionInterface
 
 
-class HtmlElementActionAdapter(HtmlElementActionInterface[TPage, TElement]):
-    def __init__(self, page: TPage):
-        super().__init__(page)
+class HtmlFileBackup:
+    __html_file_counter: int = 0
 
-    async def __save_page_in_html_file(
-        self, filename: str, html: str | None = None
-    ) -> None:
+    def __init__(self, logger):
         import os
         from pathlib import Path
 
-        directory = Path(os.getcwd()) / "logs/html"
-        directory.mkdir(exist_ok=True)
+        self._logger = logger
+        self.directory = Path(os.getcwd()) / "logs/html"
+        self.directory.mkdir(exist_ok=True)
 
-        file = directory / f"{filename}.html"
+    async def save(
+        self,
+        *,
+        filename_pattern: Callable[[int], str],
+        log_message: Callable[[str], str | None],
+        html: str,
+    ) -> None:
+        HtmlFileBackup.__html_file_counter += 1
+        filename = filename_pattern(HtmlFileBackup.__html_file_counter)
+
+        path = f"./logs/html/{filename}.html"
+        msg = log_message(path)
+        if msg:
+            self._logger.info(msg)
+
+        file = self.directory / f"{filename}.html"
         with file.open("w", encoding="utf-8") as f:
-            f.write(html if html is not None else await self._page.content())
+            f.write(html)
+
+
+TExecuteResult = TypeVar("TExecuteResult")
+
+
+class RetryAction(Generic[TExecuteResult]):
+    def __init__(self, logger: Logger):
+        self.__logger = logger
+
+    async def execute(
+        self,
+        action: Callable[[], Awaitable[TExecuteResult]],
+        on_failure: Callable[[Exception], Awaitable[TExecuteResult]],
+        retry_message: Callable[[int], str] | None = None,
+        use_error_log: bool = True,
+        retry: int = 3,
+    ) -> TExecuteResult:
+        if not retry_message:
+            retry_message = lambda r: f"Action failed. Retrying... ({r} retries left)"  # noqa: E731
+
+        try:
+            return await action()
+        except Exception as e:
+            if retry > 0:
+                self.__logger.warning(retry_message(retry))
+                return await self.execute(
+                    action,
+                    on_failure=on_failure,
+                    retry_message=retry_message,
+                    use_error_log=use_error_log,
+                    retry=retry - 1,
+                )
+
+            if use_error_log:
+                self.__logger.error(f"Action failed after retries: {e}", exc_info=True)
+
+            return await on_failure(e)
+
+
+class HtmlElementActionAdapter(HtmlElementActionInterface[TPage, TElement]):
+    def __init__(self, page: TPage, html_file_backup: HtmlFileBackup | None = None):
+        super().__init__(page)
+        self.__html_file_backup = (
+            html_file_backup
+            if html_file_backup is not None
+            else HtmlFileBackup(self._logger)
+        )
+        self._retry_action = RetryAction(self._logger)
+
+    @staticmethod
+    def __selector_description(selector: str, state: str | None, kwargs: dict) -> str:
+        details = f"selector '{selector}' in state '{state}'"
+        if kwargs:
+            details += f" with options {kwargs!r}"
+        return details
 
     async def querySelector(self, css: str) -> TElement:
         """Get the first element matching a CSS selector.
@@ -50,8 +120,6 @@ class HtmlElementActionAdapter(HtmlElementActionInterface[TPage, TElement]):
         elements = self._page.locator(css)
         return await elements.all()
 
-    
-    html_file_counter=0
     async def wait_for(
         self,
         selector: str,
@@ -74,39 +142,40 @@ class HtmlElementActionAdapter(HtmlElementActionInterface[TPage, TElement]):
             bool: True if the element reached the desired state within the timeout, False otherwise.
         """
 
-        async def rety_fn(e: Exception) -> bool:
-            if retry > 0:
-                self._logger.warning(
-                    f"Element with selector '{selector}' not found in state '{state}'. Retrying... ({retry} retries left)"
-                )
-                return await self.wait_for(
-                    selector, retry=retry - 1, timeout=timeout, state=state
-                )
+        async def action_fn() -> bool:
+            element = self._page.locator(selector, **kwargs).first
+            await element.wait_for(
+                state=state,
+                timeout=None if timeout is None else int(timeout * 1000),
+            )
+            return True
+
+        async def on_failure_fn(e: Exception) -> bool:
+            selector_description = self.__selector_description(selector, state, kwargs)
             self._logger.error(
-                f"Error while waiting for selector {selector}: {e}",
+                f"Error while waiting for {selector_description}: {e}",
                 exc_info=True,
             )
-            
-            HtmlElementActionAdapter.html_file_counter += 1
-            file_selector = f"wait_for_{HtmlElementActionAdapter.html_file_counter}"
-            self._logger.info(f"saving page for selector '{selector}' in './logs/html/{file_selector}.html'")
-            await self.__save_page_in_html_file(file_selector)
+            await self.__html_file_backup.save(
+                html=await self._page.content(),
+                filename_pattern=lambda counter: f"wait_for_{counter}",
+                log_message=lambda path: (
+                    f"saving page for {selector_description} in '{path}'"
+                ),
+            )
             return False
 
-        element = self._page.locator(selector, **kwargs).first
-        if not element:
-            self._logger.error(f"No element found for selector: {selector}")
-            return False
-
-        try:
-            await element.wait_for(timeout=self.__convert_in_ms(timeout), state=state)
-        except Exception as e:
-            return await rety_fn(e)
-
-        return True
-
-    def __convert_in_ms(self, timeout: float | None) -> int | None:
-        return None if timeout is None else int(timeout * 1000)
+        retry_action = RetryAction[bool](self._logger)
+        return await retry_action.execute(
+            action=action_fn,
+            on_failure=on_failure_fn,
+            retry_message=lambda r: (
+                f"Element with {self.__selector_description(selector, state, kwargs)} "
+                f"not found. Retrying... ({r} retries left)"
+            ),
+            use_error_log=False,
+            retry=retry,
+        )
 
     async def get_value(
         self,

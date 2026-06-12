@@ -1,4 +1,5 @@
 import asyncio
+import re
 
 from domain import Book, BookPrice
 from ports import BrowserInterface
@@ -8,6 +9,19 @@ from usecases.price_sources.PriceSourceUsecasesBase import PriceSourceUsecasesBa
 
 
 class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
+    @staticmethod
+    def __title_pattern(title: str) -> re.Pattern[str]:
+        apostrophes = "'’‘ʼ`´"
+        pattern = "".join(
+            r"\s+"
+            if char.isspace()
+            else f"[{re.escape(apostrophes)}]"
+            if char in apostrophes
+            else re.escape(char)
+            for char in title
+        )
+        return re.compile(pattern, re.IGNORECASE)
+
     async def fetch_bookprices(
         self,
         books: list[Book],
@@ -45,14 +59,13 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
         if not await page.action.wait_for(
             'div[role="listitem"] div[data-cy="title-recipe"] h2',
             state="visible",
-            has_text=book.titre,
+            has_text=self.__title_pattern(book.titre),
         ):
             self._logger.info(
                 f"Book n°{book.numero} {book.titre} ({book.isbn}) not found on Amazon"
             )
             await page.close()
             return None
-       
 
         html = await page.html()
         close_page_action = page.close()
