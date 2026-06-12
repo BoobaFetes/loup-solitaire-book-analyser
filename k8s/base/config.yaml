@@ -4,9 +4,11 @@ metadata:
   name: lsba-cm # patched by overlay
   namespace: lsba-ns # patched by overlay
 data:
+  # not necessary -> ENV: prod
   # not necessary -> ROOT_DIR: /app
   API_TIMEOUT: "1.0"
   API_PARALLEL_CALLS: "6"
   CONNECTION_STRING: data/
   LOG_FILE: logs/app.log
   LOG_LEVEL: INFO
+  # not necessary -> HEADLESS: "false" # the headless option of Playwright makes Amazon.fr send unexpected pages, so we set it to false for now, and also in the kube image to prevent errors encountered during development
