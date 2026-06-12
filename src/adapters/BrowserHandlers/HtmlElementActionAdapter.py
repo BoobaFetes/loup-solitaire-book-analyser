@@ -16,13 +16,6 @@ class HtmlElementActionAdapter(HtmlElementActionInterface[TPage, TElement]):
         )
         self._retry_action = RetryAction(self._logger)
 
-    @staticmethod
-    def __selector_description(selector: str, state: str | None, kwargs: dict) -> str:
-        details = f"selector '{selector}' in state '{state}'"
-        if kwargs:
-            details += f" with options {kwargs!r}"
-        return details
-
     async def querySelector(self, css: str) -> TElement:
         """Get the first element matching a CSS selector.
         Args:
@@ -74,6 +67,10 @@ class HtmlElementActionAdapter(HtmlElementActionInterface[TPage, TElement]):
             bool: True if the element reached the desired state within the timeout, False otherwise.
         """
 
+        details = f"selector '{selector}' in state '{state}'"
+        if kwargs:
+            details += f" with options {kwargs!r}"
+
         async def action_fn() -> bool:
             element = self._page.locator(selector, **kwargs).first
             await element.wait_for(
@@ -83,17 +80,14 @@ class HtmlElementActionAdapter(HtmlElementActionInterface[TPage, TElement]):
             return True
 
         async def on_failure_fn(e: Exception) -> bool:
-            selector_description = self.__selector_description(selector, state, kwargs)
             self._logger.error(
-                f"Error while waiting for {selector_description}: {e}",
+                f"Error while waiting for {details}: {e}",
                 exc_info=True,
             )
             await self.__html_file_backup.save(
                 html=await self._page.content(),
                 filename_pattern=lambda counter: f"wait_for_{counter}",
-                log_message=lambda path: (
-                    f"saving page for {selector_description} in '{path}'"
-                ),
+                log_message=lambda path: f"saving page for {details} in '{path}'",
             )
             return False
 
@@ -102,8 +96,7 @@ class HtmlElementActionAdapter(HtmlElementActionInterface[TPage, TElement]):
             action=action_fn,
             on_failure=on_failure_fn,
             retry_message=lambda r: (
-                f"Element with {self.__selector_description(selector, state, kwargs)} "
-                f"not found. Retrying... ({r} retries left)"
+                f"Element with {details} not found. Retrying... ({r} retries left)"
             ),
             use_error_log=False,
             retry=retry,

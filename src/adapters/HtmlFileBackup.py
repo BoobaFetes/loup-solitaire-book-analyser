@@ -1,10 +1,11 @@
 from collections.abc import Callable
+from logging import Logger
 
 
 class HtmlFileBackup:
     __html_file_counter: int = 0
 
-    def __init__(self, logger):
+    def __init__(self, logger: Logger):
         import os
         from pathlib import Path
 

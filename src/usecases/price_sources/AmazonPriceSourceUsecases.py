@@ -10,7 +10,7 @@ from usecases.price_sources.PriceSourceUsecasesBase import PriceSourceUsecasesBa
 
 class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
     @staticmethod
-    def __title_pattern(title: str) -> re.Pattern[str]:
+    def __normalize_title_by_regexp_pattern(title: str) -> re.Pattern[str]:
         apostrophes = "'’‘ʼ`´"
         pattern = "".join(
             r"\s+"
@@ -36,7 +36,7 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
                 f"searching book price for n°{book.numero} {book.titre} ({book.isbn})"
             )
             price = await self.fetch_bookprice(book, browser, context_index)
-            if price and price.price > 0:
+            if price:
                 results.append(price)
 
         return results
@@ -59,7 +59,7 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
         if not await page.action.wait_for(
             'div[role="listitem"] div[data-cy="title-recipe"] h2',
             state="visible",
-            has_text=self.__title_pattern(book.titre),
+            has_text=self.__normalize_title_by_regexp_pattern(book.titre),
         ):
             self._logger.info(
                 f"Book n°{book.numero} {book.titre} ({book.isbn}) not found on Amazon"
@@ -71,7 +71,10 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
         close_page_action = page.close()
 
         details = AmazonPriceSourceDetails(html)
-        price, currency = details.price_and_currency(book.isbn)
+        price, currency = details.price_and_currency(
+            self.__normalize_title_by_regexp_pattern(book.titre),
+            book.isbn,
+        )
         url = details.url(self.url_base, book.isbn)
 
         await asyncio.gather(close_page_action)

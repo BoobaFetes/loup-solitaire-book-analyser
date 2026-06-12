@@ -28,7 +28,7 @@ async def main():
     logger.info("summary:")
     sorted_book = sorted(books, key=lambda b: b.numero)
     for book in sorted_book:
-        logger.info(f" - {book.numero} - {book.titre}:")
+        logger.info(f" - {book.numero} - {book.titre} ({book.isbn}):")
         for price in book.prices:
             logger.info(f"   - {price}")
 
