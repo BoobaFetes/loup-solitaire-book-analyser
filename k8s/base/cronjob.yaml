@@ -24,7 +24,7 @@ spec:
               args: ["src/find_books.py"]
               envFrom:
                 - configMapRef:
-                    name: lsba-cm # patched by overlay
+                    name: lsba-cm
                     optional: false
               volumeMounts:
                 - name: project-volume
@@ -67,7 +67,7 @@ spec:
               args: ["src/find_prices.py"]
               envFrom:
                 - configMapRef:
-                    name: lsba-cm # patched by overlay
+                    name: lsba-cm
                     optional: false
               volumeMounts:
                 - name: project-volume
