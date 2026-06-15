@@ -1,8 +1,10 @@
 import logging
 from typing import Generic
 
-from ports.BrowserHandlers import (
+from ports.browser.PageHandlerInterface import (
     PageHandlerInterface,
+)
+from ports.browser.types import (
     TBrowser,
     TElement,
     TPage,

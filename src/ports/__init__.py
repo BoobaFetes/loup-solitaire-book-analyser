@@ -1,13 +1,20 @@
-from ports.BookPriceRepositoryInterface import BookPriceRepositoryInterface
-from ports.BookRepositoryInterface import BookRepositoryInterface
-from ports.BrowserInterface import BrowserInterface
-from ports.FileSystemInterface import FileSystemInterface
-from ports.HttpClientBase import HttpClientBase
+from ports.browser import (
+    BrowserInterface,
+    BrowserTypes,
+    HtmlElementActionInterface,
+    PageHandlerInterface,
+)
+from ports.database import BookPriceRepositoryInterface, BookRepositoryInterface
+from ports.http import HttpClientBase
+from ports.os import FileSystemInterface
 
 __all__ = [
+    "BrowserInterface",
+    "BrowserTypes",
+    "HtmlElementActionInterface",
+    "PageHandlerInterface",
     "BookPriceRepositoryInterface",
     "BookRepositoryInterface",
-    "FileSystemInterface",
     "HttpClientBase",
-    "BrowserInterface",
+    "FileSystemInterface",
 ]

@@ -1,7 +1,7 @@
 import logging
 from typing import Generic, Literal
 
-from ports.BrowserHandlers.types import TElement, TPage
+from ports.browser.types import TElement, TPage
 
 
 class HtmlElementActionInterface(Generic[TPage, TElement]):

@@ -26,23 +26,27 @@ class FileSystemInterface:
         """
         raise NotImplementedError
 
-    def list_html_files(self) -> list[str]:
-        """List all HTML files in the file system.
+    def list(self, pattern: str = "*.html") -> list[str]:
+        """List all files matching the given pattern in the file system.
+
+        Args:
+            pattern (str): The pattern to match files against.
 
         Returns:
-            list[str]: A list of HTML file names.
+            list[str]: A list of file names matching the pattern.
         """
         raise NotImplementedError
 
     def read_file(self, name: str) -> str:
         raise NotImplementedError
 
-    def write_file(self, name: str, content: str) -> None:
+    def write_file(self, name: str, content: str, encoding: str = "utf-8") -> None:
         """Write content to a file.
 
         Args:
             name (str): The name of the file to write to.
             content (str): The content to write to the file.
+            encoding (str): The encoding to use when writing the file.
 
         Raises:
             NotImplementedError: If the method is not implemented.
