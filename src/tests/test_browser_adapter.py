@@ -1,8 +1,8 @@
 import asyncio
 from typing import cast
 
-from adapters.BrowserAdapter import BrowserAdapter
-from adapters.BrowserHandlers.types import TBrowser, TElement, TPage
+from adapters.browser.BrowserAdapter import BrowserAdapter
+from adapters.browser.types import TBrowser, TElement, TPage
 from ports.BrowserHandlers.PageHandlerInterface import PageHandlerInterface
 
 

@@ -4,7 +4,7 @@ from typing import TypeVar, cast
 
 import httpx
 
-from adapters.HttpxLogHandler import HttpxLogHandler
+from adapters.http.HttpxLogHandler import HttpxLogHandler
 from ports import HttpClientBase
 
 TResponse = TypeVar("TResponse")

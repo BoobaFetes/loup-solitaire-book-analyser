@@ -1,8 +1,8 @@
-from typing_extensions import Literal
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
+from typing_extensions import Literal
 
-from adapters.BrowserHandlers.HtmlElementActionAdapter import HtmlElementActionAdapter
-from adapters.BrowserHandlers.types import TBrowser, TElement, TPage
+from adapters.browser.HtmlElementActionAdapter import HtmlElementActionAdapter
+from adapters.browser.types import TBrowser, TElement, TPage
 from ports.BrowserHandlers.PageHandlerInterface import (
     PageHandlerInterface,
 )
@@ -22,7 +22,9 @@ class PageHandlerAdapter(PageHandlerInterface[TBrowser, TPage, TElement]):
         await self._page.goto(url, wait_until=wait_until, timeout=timeout)
         self._logger.info("Page loaded: %s", self._page.url)
 
-    async def wait_for_url_change(self, previous_url: str, timeout: int = 10000) -> bool:
+    async def wait_for_url_change(
+        self, previous_url: str, timeout: int = 10000
+    ) -> bool:
         try:
             await self._page.wait_for_url(
                 lambda url: str(url) != previous_url,

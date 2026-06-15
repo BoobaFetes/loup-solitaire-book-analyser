@@ -1,6 +1,6 @@
 import logging
 
-from adapters.BrowserHandlers.types import TBrowser, TElement, TPage
+from adapters.browser.types import TBrowser, TElement, TPage
 from domain import Book, BookPrice
 from ports.BrowserInterface import BrowserInterface
 

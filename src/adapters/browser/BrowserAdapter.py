@@ -2,7 +2,7 @@ from typing import Any, Callable
 
 from playwright.async_api import Browser, async_playwright
 
-from adapters.BrowserHandlers.types import (
+from adapters.browser.types import (
     TBrowser,
     TElement,
     TPage,

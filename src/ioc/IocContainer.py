@@ -13,7 +13,7 @@ from adapters import (
     FileSystemAdapter,
     HttpClientAdapter,
 )
-from adapters.BrowserHandlers.PageHandlerAdapter import PageHandlerAdapter
+from adapters.browser.PageHandlerAdapter import PageHandlerAdapter
 from usecases import BookListUseCases, BookPriceUseCases
 from usecases.book_list.NonOfficialBookUseCases import NonOfficialBookUseCases
 from usecases.book_list.OfficialBookUseCases import OfficialBookUseCases

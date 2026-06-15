@@ -2,7 +2,7 @@ import copy
 import logging
 
 from adapters import BookPriceFileRepository
-from adapters.BrowserHandlers.types import TBrowser, TElement, TPage
+from adapters.browser.types import TBrowser, TElement, TPage
 from domain import Book, BookPrice
 from ports import BrowserInterface
 from usecases.price_sources import PriceSourceUsecasesBase

@@ -1,7 +1,7 @@
 from typing import Literal
 
-from adapters.BrowserHandlers.types import TElement, TPage
-from adapters.HtmlFileBackup import HtmlFileBackup
+from adapters.browser.types import TElement, TPage
+from adapters.os.HtmlFileBackup import HtmlFileBackup
 from adapters.RetryAction import RetryAction
 from ports.BrowserHandlers import HtmlElementActionInterface
 
