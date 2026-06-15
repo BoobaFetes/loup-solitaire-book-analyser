@@ -1,5 +1,8 @@
-class FileSystemInterface:
-    """ """
+from typing import Protocol
+
+
+class IFileSystem(Protocol):
+    """Interface for file system operations."""
 
     def is_file_exists(self, name: str) -> bool:
         """check if file exists
@@ -13,7 +16,7 @@ class FileSystemInterface:
         Returns:
             bool: True if the file exists, False otherwise.
         """
-        raise NotImplementedError
+        ...
 
     def clear(self, pattern: str) -> None:
         """Clear files matching the pattern.
@@ -24,7 +27,7 @@ class FileSystemInterface:
         Raises:
             NotImplementedError: If the method is not implemented.
         """
-        raise NotImplementedError
+        ...
 
     def list(self, pattern: str = "*.html") -> list[str]:
         """List all files matching the given pattern in the file system.
@@ -35,10 +38,9 @@ class FileSystemInterface:
         Returns:
             list[str]: A list of file names matching the pattern.
         """
-        raise NotImplementedError
+        ...
 
-    def read_file(self, name: str) -> str:
-        raise NotImplementedError
+    def read_file(self, name: str) -> str: ...
 
     def write_file(self, name: str, content: str, encoding: str = "utf-8") -> None:
         """Write content to a file.
@@ -51,4 +53,4 @@ class FileSystemInterface:
         Raises:
             NotImplementedError: If the method is not implemented.
         """
-        raise NotImplementedError
+        ...

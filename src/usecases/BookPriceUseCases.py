@@ -1,10 +1,9 @@
 import copy
 import logging
 
-from adapters import BookPriceFileRepository
 from adapters.browser.types import TBrowser, TElement, TPage
 from domain import Book, BookPrice
-from ports import BrowserInterface
+from ports import BrowserInterface, IUnitOfWork
 from usecases.price_sources import PriceSourceUsecasesBase
 
 
@@ -15,11 +14,11 @@ class BookPriceUseCases:
 
     def __init__(
         self,
-        repository: BookPriceFileRepository,
+        unit_of_work: IUnitOfWork,
         browser: BrowserInterface[TBrowser, TPage, TElement],
         sources: list[PriceSourceUsecasesBase],
     ):
-        self._repository = repository
+        self._unit_of_work = unit_of_work
         self._browser = browser
         self._logger = logging.getLogger(self.__class__.__name__)
         self._sources: list[PriceSourceUsecasesBase] = sources
@@ -28,8 +27,11 @@ class BookPriceUseCases:
         results: dict[str, list[BookPrice]] = {}
         prices_to_store: list[BookPrice] = []
 
-        last_prices_by_source = self._repository.list_last_price_of_source_by_isbns(
-            [source.url_base for source in self._sources], [book.isbn for book in books]
+        last_prices_by_source = (
+            await self._unit_of_work.prices.dict_last_price_of_source_by_isbns(
+                sources=[source.url_base for source in self._sources],
+                isbns=[book.isbn for book in books],
+            )
         )
 
         def should_store(price: BookPrice) -> bool:
@@ -63,7 +65,7 @@ class BookPriceUseCases:
                     if should_store(item):
                         prices_to_store.append(item)
 
-        added_items_count = self._repository.add_many(prices_to_store)
+        added_items_count = await self._unit_of_work.prices.add_many(prices_to_store)
         self._logger.info(
             f"Added {added_items_count} prices for {len(prices_to_store)} books from {len(self._sources)} sources"
         )
@@ -72,7 +74,9 @@ class BookPriceUseCases:
 
     async def bind_prices_to_books(self, books: list[Book]) -> list[Book]:
         data = copy.deepcopy(books)
-        prices_by_isbn = self._repository.list_by_isbns([book.isbn for book in books])
+        prices_by_isbn = await self._unit_of_work.prices.dict_by_isbns(
+            [book.isbn for book in books]
+        )
 
         for book in data:
             book.prices = prices_by_isbn.get(book.isbn, [])

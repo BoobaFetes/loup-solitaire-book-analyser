@@ -1,5 +1,5 @@
-from ports.os.FileSystemInterface import FileSystemInterface
+from ports.os.IFileSystem import IFileSystem
 
 __all__ = [
-    "FileSystemInterface",
+    "IFileSystem",
 ]

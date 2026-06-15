@@ -5,7 +5,7 @@ from typing import Literal
 from bs4 import BeautifulSoup
 
 from domain import Book
-from ports import BookRepositoryInterface, HttpClientBase
+from ports import HttpClientBase
 from usecases.book_list.OfficialBookDetails import OfficialBookDetails
 
 
@@ -16,11 +16,9 @@ class OfficialBookUseCases:
 
     def __init__(
         self,
-        repository: BookRepositoryInterface,
         client: HttpClientBase,
         parallel_calls: int = 5,
     ):
-        self._repository = repository
         self._client = client
         self._logger = logging.getLogger(self.__class__.__name__)
         self._parallel_calls = parallel_calls
@@ -138,24 +136,3 @@ class OfficialBookUseCases:
             )
 
         return book
-
-    def get_total_and_average_by_currency(self) -> dict[str, tuple[float, float]]:
-        self._logger.info("Calculating total and average prices")
-        books = self._repository.list()
-        books_by_currency: dict[str, dict[str, float]] = {}
-        for book in books:
-            for price in book.prices:
-                if not books_by_currency.get(price.currency):
-                    books_by_currency[price.currency] = {"total": 0.0, "average": 0.0}
-
-                books_by_currency[price.currency]["total"] += price.price
-                books_by_currency[price.currency]["average"] = (
-                    books_by_currency[price.currency]["total"] / len(book.prices)
-                    if book.prices
-                    else 0.0
-                )
-
-        result: dict[str, tuple[float, float]] = {}
-        for currency, values in books_by_currency.items():
-            result[currency] = (values["total"], values["average"])
-        return result

@@ -1,5 +1,5 @@
 from adapters.browser import BrowserAdapter, PageHandlerAdapter
-from adapters.database import BookFileRepository, BookPriceFileRepository
+from adapters.database.file_system import BookFileRepository, BookPriceFileRepository
 from adapters.http.HttpClientAdapter import HttpClientAdapter
 from adapters.os.FileSystemAdapter import FileSystemAdapter
 

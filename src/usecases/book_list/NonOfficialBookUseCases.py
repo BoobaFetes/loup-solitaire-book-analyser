@@ -5,7 +5,7 @@ import re
 from bs4 import BeautifulSoup
 
 from domain import Book
-from ports import BookRepositoryInterface, HttpClientBase
+from ports import HttpClientBase
 from usecases.book_list.NonOfficialBookDetails import NonOfficialBookDetails
 
 
@@ -34,11 +34,9 @@ class NonOfficialBookUseCases:
 
     def __init__(
         self,
-        repository: BookRepositoryInterface,
         client: HttpClientBase,
         parallel_calls: int = 5,
     ):
-        self._repository = repository
         self._client = client
         self._logger = logging.getLogger(self.__class__.__name__)
         self._parallel_calls = parallel_calls

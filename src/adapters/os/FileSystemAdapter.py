@@ -1,14 +1,14 @@
 import logging
 from pathlib import Path
 
-from ports import FileSystemInterface
+from ports import IFileSystem
 
 
-class FileSystemAdapter(FileSystemInterface):
+class FileSystemAdapter(IFileSystem):
     """Adaptateur pour l'interface du système de fichiers.
 
     Args:
-        FileSystemInterface: L'interface du système de fichiers.
+        IFileSystem: L'interface du système de fichiers.
     """
 
     def __init__(self, path: str):
