@@ -2,8 +2,7 @@ import asyncio
 import re
 
 from domain import Book, BookPrice
-from ports import BrowserInterface
-from ports.BrowserHandlers.types import TBrowser, TElement, TPage
+from ports import BrowserInterface, BrowserTypes
 from usecases.price_sources.AmazonPriceSourceDetails import AmazonPriceSourceDetails
 from usecases.price_sources.PriceSourceUsecasesBase import PriceSourceUsecasesBase
 
@@ -34,7 +33,9 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
     async def fetch_bookprices(
         self,
         books: list[Book],
-        browser: BrowserInterface[TBrowser, TPage, TElement],
+        browser: BrowserInterface[
+            BrowserTypes.TBrowser, BrowserTypes.TPage, BrowserTypes.TElement
+        ],
         context_index: int = 0,
     ) -> list[BookPrice]:
         results: list[BookPrice] = []
@@ -56,7 +57,9 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
     async def fetch_bookprice(
         self,
         book: Book,
-        browser: BrowserInterface[TBrowser, TPage, TElement],
+        browser: BrowserInterface[
+            BrowserTypes.TBrowser, BrowserTypes.TPage, BrowserTypes.TElement
+        ],
         context_index: int = 0,
     ) -> BookPrice | None:
         page = await browser.new_page(self.url_base, context_index)

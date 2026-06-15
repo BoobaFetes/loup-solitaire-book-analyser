@@ -3,9 +3,7 @@ from typing_extensions import Literal
 
 from adapters.browser.HtmlElementActionAdapter import HtmlElementActionAdapter
 from adapters.browser.types import TBrowser, TElement, TPage
-from ports.BrowserHandlers.PageHandlerInterface import (
-    PageHandlerInterface,
-)
+from ports import PageHandlerInterface
 
 
 class PageHandlerAdapter(PageHandlerInterface[TBrowser, TPage, TElement]):

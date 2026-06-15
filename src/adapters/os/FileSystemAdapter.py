@@ -51,11 +51,14 @@ class FileSystemAdapter(FileSystemInterface):
             )
             raise
 
-    def list_html_files(self) -> list[str]:
-        """List all HTML files in the directory.
+    def list(self, pattern: str = "*.html") -> list[str]:
+        """List all files matching the given pattern in the file system.
+
+        Args:
+            pattern (str): The pattern to match files against.
 
         Returns:
-            list[str]: A list of HTML file names.
+            list[str]: A list of file names matching the pattern.
         """
         return [str(file.name) for file in self._path.glob("*.html") if file.is_file()]
 
@@ -90,12 +93,13 @@ class FileSystemAdapter(FileSystemInterface):
             )
             raise
 
-    def write_file(self, name: str, content: str) -> None:
+    def write_file(self, name: str, content: str, encoding: str = "utf-8") -> None:
         """Write the contents to a file.
 
         Args:
             name (str): The name of the file to write.
             content (str): The contents to write to the file.
+            encoding (str): The encoding to use when writing the file.
 
         Raises:
             ValueError: If the file path is invalid.
