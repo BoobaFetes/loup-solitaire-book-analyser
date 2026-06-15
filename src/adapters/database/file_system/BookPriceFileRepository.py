@@ -16,7 +16,7 @@ implémentation DB sans modifier le domaine.
 import copy
 import logging
 from collections.abc import Callable
-from sqlite3 import Date
+from datetime import date as Date
 from typing import List
 
 from adapters.database.file_system.Database import Database
