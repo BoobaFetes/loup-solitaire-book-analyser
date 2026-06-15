@@ -3,7 +3,7 @@ from typing import cast
 
 from adapters.browser.BrowserAdapter import BrowserAdapter
 from adapters.browser.types import TBrowser, TElement, TPage
-from ports.BrowserHandlers.PageHandlerInterface import PageHandlerInterface
+from ports import PageHandlerInterface
 
 
 class FakeBrowser:
