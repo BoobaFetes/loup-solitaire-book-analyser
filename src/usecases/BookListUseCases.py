@@ -42,8 +42,8 @@ class BookListUseCases:
         books.sort(key=lambda b: b.id)
 
         self._logger.info("records books in repository")
-        added_count = await self._unit_of_work.books.upsert_many(books)
-        if added_count != len(books):
+        stored_items = await self._unit_of_work.books.upsert_many(books)
+        if len(stored_items) != len(books):
             self._logger.warning("Not all books were upserted to the repository.")
 
         return await self._unit_of_work.books.list()
@@ -79,9 +79,3 @@ class BookListUseCases:
 
     async def list(self) -> list[Book]:
         return await self._unit_of_work.books.list()
-
-    async def get(self, id: int) -> Book | None:
-        data = await self._unit_of_work.books.get(id=id)
-        if not data:
-            raise ValueError(f"Book with id {id} not found")
-        return data

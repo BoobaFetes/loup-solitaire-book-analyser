@@ -65,9 +65,9 @@ class BookPriceUseCases:
                     if should_store(item):
                         prices_to_store.append(item)
 
-        added_items_count = await self._unit_of_work.prices.add_many(prices_to_store)
+        stored_items = await self._unit_of_work.prices.upsert_many(prices_to_store)
         self._logger.info(
-            f"Added {added_items_count} prices for {len(prices_to_store)} books from {len(self._sources)} sources"
+            f"Added {len(stored_items)} prices for {len(prices_to_store)} books from {len(self._sources)} sources"
         )
 
         return results
