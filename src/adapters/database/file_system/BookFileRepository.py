@@ -1,21 +1,5 @@
-"""Gateways: couche d'adaptateurs d'accès aux données (ports/adapters).
-
-Dans la Clean Architecture, le répertoire `gateways` contient les adaptateurs
-qui implémentent les interfaces demandées par le domaine/usecases pour
-accéder aux données (base, fichiers, API externes, mémoire, etc.).
-
-- BookRepositoryInterface : définit le contrat attendu par les usecases.
-- BookFileRepository : implémentation simple utile pour les tests ou
-  pour des scénarios sans persistance externe.
-
-Remarque : les usecases dépendent de l'interface (abstraction), pas de cette
-implémentation concrète. On peut remplacer BookFileRepository par une
-implémentation DB sans modifier le domaine.
-"""
-
 import logging
 from collections.abc import Callable
-from typing import List
 
 from adapters.database.file_system.Database import Database
 from domain import Book, BookPrice
@@ -95,8 +79,7 @@ class BookFileRepository(IBookRepository):
         try:
             data = await self.__db.read_book_store()
             selected = [item for item in data.values() if item.id == id]
-            if selected:
-                return selected[0]
+            return selected[0] if selected else None
         except Exception as e:
             self.__logger.error(
                 f"Error getting book for id '{id}': {type(e).__name__}: {e}",
@@ -104,10 +87,10 @@ class BookFileRepository(IBookRepository):
             )
         return None
 
-    async def upsert_many(self, entities: list[Book]) -> int:
+    async def upsert_many(self, entities: list[Book]) -> list[Book]:
         try:
             if not entities:
-                return 0
+                return []
 
             data = await self.__db.read_book_store()
 
@@ -130,34 +113,35 @@ class BookFileRepository(IBookRepository):
             await self.__prices.upsert_many(prices_to_store)
 
             self.__logger.info(f"Upserted {ref['count']} books in file system")
-            return ref["count"]
+            return entities
         except Exception as e:
             self.__logger.error(
                 f"Error upserting books : {type(e).__name__}: {e}",
                 exc_info=True,
             )
 
-        return 0
+        return entities
 
     async def upsert(self, entity: Book) -> Book | None:
-        try:
-            data = await self.__db.read_book_store()
-            prices_to_store: list[BookPrice] = []
-            self.__upsert_engine(
-                data, prices_to_store, entity, on_add=None, on_update=None
-            )
+        # try:
+        #     data = await self.__db.read_book_store()
+        #     prices_to_store: list[BookPrice] = []
+        #     self.__upsert_engine(
+        #         data, prices_to_store, entity, on_add=None, on_update=None
+        #     )
 
-            await self.__db.write_book_store(data)
-            await self.__prices.upsert_many(prices_to_store)
+        #     await self.__db.write_book_store(data)
+        #     await self.__prices.upsert_many(prices_to_store)
 
-            return await self.get(entity.id)
-        except Exception as e:
-            self.__logger.error(
-                f"Error upserting book n°'{entity.numero}' (id: {entity.id}): {type(e).__name__}: {e}",
-                exc_info=True,
-            )
+        #     return await self.get(entity.id)
+        # except Exception as e:
+        #     self.__logger.error(
+        #         f"Error upserting book n°'{entity.numero}' (id: {entity.id}): {type(e).__name__}: {e}",
+        #         exc_info=True,
+        #     )
 
-        return None
+        # return None
+        raise NotImplementedError("upsert is not implemented for BookFileRepository.")
 
     def __upsert_engine(
         self,
@@ -183,153 +167,3 @@ class BookFileRepository(IBookRepository):
         entity.prices = []
         if on_add:
             on_add()
-
-    async def add_many(self, entities: List[Book]) -> int:
-        try:
-            if not entities:
-                return 0
-
-            data = await self.__db.read_book_store()
-
-            count = 0
-            prices_to_store: list[BookPrice] = []
-            for entity in entities:
-                stored_data = data.get(str(entity.id), None)
-                if stored_data:
-                    continue
-
-                data[str(entity.id)] = entity
-                prices_to_store.extend(entity.prices)
-                entity.prices = []
-                count += 1
-
-            await self.__db.write_book_store(data)
-            await self.__prices.upsert_many(prices_to_store)
-
-            self.__logger.info(f"Added {count} books to file system")
-            return count
-        except Exception as e:
-            self.__logger.error(
-                f"Error adding books: {type(e).__name__}: {e}",
-                exc_info=True,
-            )
-
-        return 0
-
-    async def add(self, entity: Book) -> Book | None:
-        try:
-            data = await self.__db.read_book_store()
-            stored_data = data.get(str(entity.id), None)
-            if stored_data:
-                return None
-
-            prices_to_store: list[BookPrice] = entity.prices
-            data[str(entity.id)] = entity
-            entity.prices = []
-
-            await self.__db.write_book_store(data)
-            await self.__prices.upsert_many(prices_to_store)
-
-            return await self.get(entity.id)
-        except Exception as e:
-            self.__logger.error(
-                f"Error adding book n°'{entity.numero}' (id: {entity.id}) in file system: {type(e).__name__}: {e}",
-                exc_info=True,
-            )
-        return None
-
-    async def update_many(self, entities: List[Book]) -> int:
-        try:
-            if not entities:
-                return 0
-
-            data = await self.__db.read_book_store()
-            prices_to_store: list[BookPrice] = []
-
-            count = 0
-            for book in entities:
-                stored_data = data.get(str(book.id), None)
-                if not stored_data:
-                    continue
-
-                data[str(book.id)] = book
-                prices_to_store.extend(book.prices)
-                book.prices = []
-                count += 1
-
-            await self.__db.write_book_store(data)
-            await self.__prices.upsert_many(prices_to_store)
-
-            self.__logger.info(f"Updated {count} books in file system")
-            return count
-        except Exception as e:
-            self.__logger.error(
-                f"Error updating books: {type(e).__name__}: {e}",
-                exc_info=True,
-            )
-
-        return 0
-
-    async def update(self, entity: Book) -> Book | None:
-        try:
-            data = await self.__db.read_book_store()
-
-            stored_data = data.get(str(entity.id), None)
-            if not stored_data:
-                return None
-
-            data[str(entity.id)] = entity
-            prices_to_store: list[BookPrice] = entity.prices
-            entity.prices = []
-
-            await self.__db.write_book_store(data)
-            await self.__prices.upsert_many(prices_to_store)
-
-            self.__logger.info(
-                f"Updated book n°'{entity.numero}' (id: {entity.id}) in file system",
-            )
-            return await self.get(entity.id)
-        except Exception as e:
-            self.__logger.error(
-                f"Error updating book n°'{entity.numero}' (id: {entity.id}) in file system: {type(e).__name__}: {e}",
-                exc_info=True,
-            )
-
-        return None
-
-    async def delete(self, id: int) -> bool:
-        """
-        Delete an entity from the repository by its ID.
-
-        :param id: The ID of the entity to be deleted.
-        """
-        try:
-            data = await self.get(id)
-            if not data:
-                return False
-
-            store = await self.__db.read_book_store()
-            del store[str(data.id)]
-
-            await self.__db.write_book_store(store)
-            for price in data.prices:
-                await self.__prices.delete((price.isbn, price.source, price.date))
-            return True
-        except Exception as e:
-            self.__logger.error(
-                f"Error removing book id: {id}: {type(e).__name__}: {e}",
-                exc_info=True,
-            )
-        return False
-
-    async def clear(self) -> bool:
-        try:
-            await self.__db.write_book_store({})
-            await self.__prices.clear()
-            self.__logger.info("Cleared all books from file system")
-            return True
-        except Exception as e:
-            self.__logger.error(
-                f"Error clearing books: {type(e).__name__}: {e}", exc_info=True
-            )
-        return False

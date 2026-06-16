@@ -1,23 +1,6 @@
-"""Gateways: couche d'adaptateurs d'accès aux données (ports/adapters).
-
-Dans la Clean Architecture, le répertoire `gateways` contient les adaptateurs
-qui implémentent les interfaces demandées par le domaine/usecases pour
-accéder aux données (base, fichiers, API externes, mémoire, etc.).
-
-- BookRepositoryInterface : définit le contrat attendu par les usecases.
-- BookFileRepository : implémentation simple utile pour les tests ou
-  pour des scénarios sans persistance externe.
-
-Remarque : les usecases dépendent de l'interface (abstraction), pas de cette
-implémentation concrète. On peut remplacer BookFileRepository par une
-implémentation DB sans modifier le domaine.
-"""
-
-import copy
 import logging
 from collections.abc import Callable
 from datetime import date as Date
-from typing import List
 
 from adapters.database.file_system.Database import Database
 from domain import BookPrice
@@ -117,10 +100,10 @@ class BookPriceFileRepository(IBookPriceRepository):
             )
         return None
 
-    async def upsert_many(self, entities: list[BookPrice]) -> int:
+    async def upsert_many(self, entities: list[BookPrice]) -> list[BookPrice]:
         try:
             if not entities:
-                return 0
+                return []
 
             data = await self.__db.read_price_store()
 
@@ -136,31 +119,36 @@ class BookPriceFileRepository(IBookPriceRepository):
 
             await self.__db.write_price_store(data)
             self.__logger.info(f"Upserted {ref['count']} book prices in file system")
-            return ref["count"]
+
+            items = await self.dict_by_isbns([entity.isbn for entity in entities])
+            return [item for prices in items.values() for item in prices]
         except Exception as e:
             self.__logger.error(
                 f"Error upserting book prices: {type(e).__name__}: {e}",
                 exc_info=True,
             )
 
-        return 0
+        return []
 
     async def upsert(self, entity: BookPrice) -> BookPrice | None:
-        try:
-            data = await self.__db.read_price_store()
+        # try:
+        #     data = await self.__db.read_price_store()
 
-            self.__upsert_engine(data, entity, on_add=None, on_update=None)
+        #     self.__upsert_engine(data, entity, on_add=None, on_update=None)
 
-            await self.__db.write_price_store(data)
+        #     await self.__db.write_price_store(data)
 
-            return await self.get((entity.isbn, entity.source, entity.date))
-        except Exception as e:
-            self.__logger.error(
-                f"Error upserting book price for ISBN '{entity.isbn}' and source '{entity.source}' on date '{entity.date}': {type(e).__name__}: {e}",
-                exc_info=True,
-            )
+        #     return await self.get((entity.isbn, entity.source, entity.date))
+        # except Exception as e:
+        #     self.__logger.error(
+        #         f"Error upserting book price for ISBN '{entity.isbn}' and source '{entity.source}' on date '{entity.date}': {type(e).__name__}: {e}",
+        #         exc_info=True,
+        #     )
 
-        return None
+        # return None
+        raise NotImplementedError(
+            "upsert is not implemented for BookPriceFileRepository."
+        )
 
     def __upsert_engine(
         self,
@@ -186,194 +174,3 @@ class BookPriceFileRepository(IBookPriceRepository):
         stored_data.append(entity)
         if on_add:
             on_add()
-
-    async def add_many(self, entities: List[BookPrice]) -> int:
-        try:
-            if not entities:
-                return 0
-
-            data = await self.__db.read_price_store()
-
-            count = 0
-            for price in entities:
-                stored_data = data.get(price.isbn, [])
-                data[price.isbn] = stored_data
-
-                # if any(
-                #     [
-                #         data
-                #         for data in stored_data
-                #         if self._keys_matches(price, data, for_operation="add")
-                #     ]
-                # ):
-                #     continue
-                if any([item for item in stored_data if price == item]):
-                    continue
-
-                stored_data.append(price)
-                count += 1
-
-            await self.__db.write_price_store(data)
-            self.__logger.info(f"Added {count} book prices to file system")
-            return count
-        except Exception as e:
-            self.__logger.error(
-                f"Error adding book prices: {type(e).__name__}: {e}",
-                exc_info=True,
-            )
-
-        return 0
-
-    async def add(self, entity: BookPrice) -> BookPrice | None:
-        try:
-            data = await self.__db.read_price_store()
-            stored_data = data.get(entity.isbn, [])
-            data[entity.isbn] = stored_data
-
-            # if any(
-            #     [
-            #         data
-            #         for data in stored_data
-            #         if self._keys_matches(entity, data, for_operation="add")
-            #     ]
-            # ):
-            #     return None
-            if any([item for item in stored_data if item == entity]):
-                return None
-
-            stored_data.append(entity)
-            await self.__db.write_price_store(data)
-            self.__logger.info(
-                f"Added book price for ISBN {entity.isbn} with source {entity.source} and price {entity.price} {entity.currency} to file system",
-                exc_info=True,
-            )
-            return await self.get((entity.isbn, entity.source, entity.date))
-
-        except Exception as e:
-            self.__logger.error(
-                f"Error adding book price for ISBN {entity.isbn}: {type(e).__name__}: {e}",
-                exc_info=True,
-            )
-        return None
-
-    async def update_many(self, entities: List[BookPrice]) -> int:
-        try:
-            if not entities:
-                return 0
-
-            data = await self.__db.read_price_store()
-
-            count = 0
-            for price in entities:
-                stored_data = data.get(price.isbn, [])
-                data[price.isbn] = stored_data
-
-                for i, stored_item in enumerate(stored_data):
-                    # if self._keys_matches(price, stored_item, for_operation="update"):
-                    if price == stored_item:
-                        stored_data[i] = price
-                        count += 1
-                        break
-
-            await self.__db.write_price_store(data)
-            self.__logger.info(f"Updated {count} book prices in file system")
-            return count
-        except Exception as e:
-            self.__logger.error(
-                f"Error updating book prices: {type(e).__name__}: {e}",
-                exc_info=True,
-            )
-
-        return 0
-
-    async def update(self, entity: BookPrice) -> BookPrice | None:
-        try:
-            data = await self.__db.read_price_store()
-
-            stored_data = data.get(entity.isbn, [])
-            data[entity.isbn] = stored_data
-
-            for i, stored_item in enumerate(stored_data):
-                # if self._keys_matches(entity, stored_item, for_operation="update"):
-                if entity == stored_item:
-                    stored_data[i] = entity
-                    break
-
-            await self.__db.write_price_store(data)
-            self.__logger.info(
-                f"Updated book price for ISBN {entity.isbn} with source {entity.source} and price {entity.price} {entity.currency} in file system",
-            )
-            return await self.get((entity.isbn, entity.source, entity.date))
-        except Exception as e:
-            self.__logger.error(
-                f"Error updating book prices: {type(e).__name__}: {e}",
-                exc_info=True,
-            )
-
-        return None
-
-    async def delete(self, id: tuple[str, str, Date]) -> bool:
-        """
-        Delete an entity from the repository by its ID.
-
-        :param id: The ID of the entity to be deleted.
-        """
-        try:
-            store = await self.__db.read_price_store()
-            data = await self.get(id)
-            if not data:
-                return False
-
-            new_store = copy.deepcopy(store)
-            new_store[data.isbn] = [
-                item for item in new_store[data.isbn] if data != item
-            ]
-
-            await self.__db.write_price_store(new_store)
-            return True
-        except Exception as e:
-            self.__logger.error(
-                f"Error removing book {id}: {type(e).__name__}: {e}",
-                exc_info=True,
-            )
-        return False
-
-    async def clear(self) -> bool:
-        try:
-            await self.__db.write_price_store({})
-            self.__logger.info("Cleared all book prices from file system")
-            return True
-        except Exception as e:
-            self.__logger.error(
-                f"Error clearing book prices: {type(e).__name__}: {e}", exc_info=True
-            )
-        return False
-
-    # => should not bu used because there is a __eq__ method implemented in the entity model
-    # def _keys_matches(
-    #     self,
-    #     price: BookPrice,
-    #     stored_item: BookPrice,
-    #     for_operation: Literal["add", "update", "delete"],
-    # ) -> bool:
-
-    #     # s'il ne s'agit pas du tout de la meme source et du meme isbn alors ce n'est pas le même item
-    #     if not (
-    #         price.isbn == stored_item.isbn and price.source == stored_item.source
-    #     ):
-    #         return False
-
-    #     if for_operation in ["update", "delete"]:
-    #         # si la date doit matcher alors on vérifie que c'est le même item en comparant la date
-    #         # dans le cas d'une mise à jour ou d'une suppression les 3 clés doivent matcher
-    #         return price.date == stored_item.date
-    #     elif for_operation == "add":
-    #         # dans le cas d'un ajout, la date ne doit pas matcher
-    #         return (
-    #             price.date != stored_item.date
-    #         )  # may be ? set to before=> return True
-    #     else:
-    #         # vu que l'on utilise pyright pour valider les types, cette condition ne devrait jamais être vérifiée, mais on la laisse pour garantir la robustesse du code en cas de mauvaise utilisation de la méthode
-    #         raise ValueError(
-    #             f"Invalid operation: {for_operation}. Expected 'add', 'update' or 'delete'."
-    #         )
