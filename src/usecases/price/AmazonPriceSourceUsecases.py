@@ -1,23 +1,26 @@
 import asyncio
 import re
 from collections.abc import Callable
+from typing import cast
 
 from domain import Book, BookPrice
-from ports.browser import BrowserInterface, BrowserTypes
+from ports.browser import BrowserInterface
 from ports.usecase import PriceDetailsFinderBase
-from usecases.price_sources.PriceSourceUsecasesBase import PriceSourceUsecasesBase
+from usecases.price.PriceSourceUsecasesBase import PriceSourceUsecasesBase
 
 
 class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
     def __init__(
         self,
-        url_base: str,
+        base_url: str,
         details_factory: Callable[[str], PriceDetailsFinderBase],
+        browser: BrowserInterface,
         parallel_calls: int = 5,
         request_delay_seconds: float = 1.0,
     ):
-        super().__init__(url_base, parallel_calls)
+        super().__init__(base_url, parallel_calls)
         self.__details_factory = details_factory
+        self.__browser = browser
         self.__request_delay_seconds = request_delay_seconds
 
     @staticmethod
@@ -33,39 +36,40 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
         )
         return re.compile(pattern, re.IGNORECASE)
 
-    async def fetch_bookprices(
-        self,
-        books: list[Book],
-        browser: BrowserInterface[
-            BrowserTypes.TBrowser, BrowserTypes.TPage, BrowserTypes.TElement
-        ],
-        context_index: int = 0,
-    ) -> list[BookPrice]:
+    async def fetch_bookprices(self, books: list[Book]) -> list[BookPrice]:
         results: list[BookPrice] = []
-
         self._logger.info(f"searching book prices for {len(books)} books")
-        for index, book in enumerate(books):
-            if index > 0 and self.__request_delay_seconds > 0:
-                await asyncio.sleep(self.__request_delay_seconds)
 
-            self._logger.info(
-                f"searching book price for n°{book.numero} {book.titre} ({book.isbn})"
-            )
-            price = await self.fetch_bookprice(book, browser, context_index)
-            if price:
-                results.append(price)
+        async with self.__browser as browser:
+            context_index = await browser.new_context()
+
+            for index, book in enumerate(books):
+                if index > 0 and self.__request_delay_seconds > 0:
+                    await asyncio.sleep(self.__request_delay_seconds)
+
+                self._logger.info(
+                    f"searching book price for n°{book.numero} {book.titre} ({book.isbn})"
+                )
+                price = await self.fetch_bookprice(
+                    book, browser=browser, context_index=context_index
+                )
+                if price:
+                    results.append(price)
 
         return results
 
-    async def fetch_bookprice(
-        self,
-        book: Book,
-        browser: BrowserInterface[
-            BrowserTypes.TBrowser, BrowserTypes.TPage, BrowserTypes.TElement
-        ],
-        context_index: int = 0,
-    ) -> BookPrice | None:
-        page = await browser.new_page(self.url_base, context_index)
+    async def fetch_bookprice(self, book: Book, **kwargs) -> BookPrice | None:
+        # check parameters
+        browser = cast(BrowserInterface, kwargs.get("browser", None))
+        if not browser or not isinstance(browser, BrowserInterface):
+            raise ValueError("browser must be an instance of BrowserInterface")
+
+        context_index = cast(int | None, kwargs.get("context_index", None))
+        if context_index is None or not isinstance(context_index, int):
+            raise ValueError("context_index must be an integer or None")
+
+        # action
+        page = await browser.new_page(self.base_url, context_index)
         self._logger.info("Amazon home loaded: %s", await page.current_url())
 
         # search for the book using the isbn
@@ -101,12 +105,12 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
             isbn=book.isbn,
             title_pattern=self.__normalize_title_by_regexp_pattern(book.titre),
         )
-        url = details.url(isbn=book.isbn, url_base=self.url_base)
+        url = details.url(isbn=book.isbn, base_url=self.base_url)
 
         await asyncio.gather(close_page_action)
         return BookPrice(
             isbn=book.isbn,
-            source=self.url_base,
+            source=self.base_url,
             price=price,
             currency=currency,
             url=url,

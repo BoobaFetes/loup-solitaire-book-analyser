@@ -12,8 +12,8 @@ from adapters.http import HttpClientAdapter
 from adapters.os import FileSystemAdapter
 from adapters.usecase import amazon, biblio_aventurier, gallimard
 from usecases import BookListUseCases, BookPriceUseCases
-from usecases.book_list import NonOfficialBookUseCases, OfficialBookUseCases
-from usecases.price_sources import AmazonPriceSourceUsecases
+from usecases.book import NonOfficialBookUseCases, OfficialBookUseCases
+from usecases.price import AmazonPriceSourceUsecases, GallimardPriceSourceUsecases
 
 DEFAULT_BROWSER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
 
@@ -34,8 +34,13 @@ def _make_logging_handlers(root_dir: str, log_file: str) -> list[Handler]:
     ]
 
 
+websites = {
+    "gallimard": "https://www.gallimard-jeunesse.fr",
+    "biblio_aventurier": "https://www.bibliotheque-des-aventuriers.com/",
+    "amazon": "https://www.amazon.fr/",
+}
 finders = {
-    "amazon": {"details": providers.Factory(amazon.AmazonPriceDetailsFinder).provider},
+    "amazon": {"price": providers.Factory(amazon.AmazonPriceDetailsFinder).provider},
     "biblio_aventurier": {
         "list": providers.Factory(
             biblio_aventurier.BiblioAventurierBookListFinder
@@ -47,6 +52,7 @@ finders = {
     "gallimard": {
         "list": providers.Factory(gallimard.GallimardBookListFinder).provider,
         "details": providers.Factory(gallimard.GallimardBookDetailsFinder).provider,
+        "price": providers.Factory(gallimard.GallimardPriceDetailsFinder).provider,
     },
 }
 
@@ -98,7 +104,7 @@ class IocContainer(containers.DeclarativeContainer):
 
     # region http adapters
 
-    http_client = providers.Singleton(
+    http_client = providers.Factory(
         HttpClientAdapter,
         retry_delay=config.api_timeout,
         headers=providers.Dict({"User-Agent": config.browser_user_agent}),
@@ -128,13 +134,16 @@ class IocContainer(containers.DeclarativeContainer):
     official_book_usecases = providers.Singleton(
         OfficialBookUseCases,
         client=http_client,
+        base_url=websites["gallimard"],
         list_factory=finders["gallimard"]["list"],
         details_factory=finders["gallimard"]["details"],
+        price_details_factory=finders["gallimard"]["price"],
         parallel_calls=config.api_parallel_calls,
     )
 
     non_official_book_usecases = providers.Singleton(
         NonOfficialBookUseCases,
+        base_url=websites["biblio_aventurier"],
         client=http_client,
         list_factory=finders["biblio_aventurier"]["list"],
         details_factory=finders["biblio_aventurier"]["details"],
@@ -144,10 +153,18 @@ class IocContainer(containers.DeclarativeContainer):
     # endregion
 
     # region book price usecases
+    gallimard_price_source_usecases = providers.Singleton(
+        GallimardPriceSourceUsecases,
+        base_url=websites["gallimard"],
+        client=http_client,
+        details_factory=finders["gallimard"]["price"],
+        parallel_calls=config.api_parallel_calls,
+    )
     amazon_price_source_usecases = providers.Singleton(
         AmazonPriceSourceUsecases,
-        url_base="https://www.amazon.fr/",
-        details_factory=finders["amazon"]["details"],
+        base_url=websites["amazon"],
+        details_factory=finders["amazon"]["price"],
+        browser=browser,
         parallel_calls=config.api_parallel_calls,
         request_delay_seconds=config.amazon_request_delay_seconds,
     )
@@ -165,8 +182,8 @@ class IocContainer(containers.DeclarativeContainer):
     book_price_usecases = providers.Singleton(
         BookPriceUseCases,
         unit_of_work=unit_of_work,
-        browser=browser,
         sources=providers.List(
+            gallimard_price_source_usecases,
             amazon_price_source_usecases,
         ),
     )

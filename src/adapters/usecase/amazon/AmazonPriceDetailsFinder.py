@@ -11,8 +11,8 @@ from ports.usecase import PriceDetailsFinderBase
 
 class AmazonPriceDetailsFinder(PriceDetailsFinderBase):
     def __init__(self, html: str):
-        self._logger = logging.getLogger(self.__class__.__name__)
-        self._soup = BeautifulSoup(html, "html.parser")
+        self.__logger = logging.getLogger(self.__class__.__name__)
+        self.__soup = BeautifulSoup(html, "html.parser")
 
     def url(self, **kwargs) -> str:
         # check parameters
@@ -23,32 +23,32 @@ class AmazonPriceDetailsFinder(PriceDetailsFinderBase):
             )
         elif not isinstance(isbn, str):
             raise ValueError("'isbn' is not of type 'str' for URL extraction.")
-        url_base = kwargs.get("url_base", "")
-        if not url_base:
+        base_url = kwargs.get("base_url", "")
+        if not base_url:
             raise ValueError(
-                "'url_base' property of type 'str' must be provided in kwargs for URL extraction."
+                "'base_url' property of type 'str' must be provided in kwargs for URL extraction."
             )
-        elif not isinstance(url_base, str):
-            raise ValueError("'url_base' is not of type 'str' for URL extraction.")
+        elif not isinstance(base_url, str):
+            raise ValueError("'base_url' is not of type 'str' for URL extraction.")
 
         # action
-        element = self._soup.select_one(
+        element = self.__soup.select_one(
             f'div[role="listitem"] div[data-cy="title-recipe"] > a[href*="keywords={isbn}"]'
         )
         if not element or not isinstance(element, Tag) or element.name != "a":
-            self._logger.error(
+            self.__logger.error(
                 f"No potential url to the details page found in the page for isbn {isbn}."
             )
             return ""
 
         segment = str(element.attrs.get("href", "")).strip()
         if not segment:
-            self._logger.error(
+            self.__logger.error(
                 f"The link to the details page is empty for isbn {isbn}."
             )
             return ""
 
-        return urljoin(url_base, segment)
+        return urljoin(base_url, segment)
 
     def price_and_currency(self, **kwargs) -> tuple[float, str]:
         # check parameters
@@ -78,11 +78,11 @@ class AmazonPriceDetailsFinder(PriceDetailsFinderBase):
         items = list(
             filter(
                 self.__is_matching_title_fn(title_pattern, isbn),
-                self._soup.select('div[role="listitem"]'),
+                self.__soup.select('div[role="listitem"]'),
             )
         )
         if not items:
-            self._logger.error(
+            self.__logger.error(
                 f"No item found with matching title in the page for isbn {isbn}."
             )
             return 0.0, "not set"
@@ -91,7 +91,7 @@ class AmazonPriceDetailsFinder(PriceDetailsFinderBase):
             'div[data-cy="price-recipe"] span.a-price > span:first-child',
         )
         if not element:
-            self._logger.error(
+            self.__logger.error(
                 f"No potential price information found in the page for isbn {isbn}."
             )
             return 0.0, "not set"

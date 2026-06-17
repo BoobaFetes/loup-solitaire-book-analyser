@@ -1,7 +1,6 @@
 import base64
 from abc import ABC, abstractmethod
 
-from domain import BookPrice
 from ports.http import HttpClientBase
 from ports.usecase.DetailsHtmlFinderBase import DetailsHtmlFinderBase
 
@@ -43,9 +42,6 @@ class BookDetailsFinderBase(DetailsHtmlFinderBase, ABC):
 
     @abstractmethod
     def official(self) -> bool: ...
-
-    @abstractmethod
-    def prices(self, **kwargs) -> list[BookPrice]: ...
 
     @abstractmethod
     async def image(self, client: HttpClientBase, **kwargs) -> str: ...
