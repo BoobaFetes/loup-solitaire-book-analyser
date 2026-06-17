@@ -4,7 +4,7 @@ from datetime import date as Date
 
 from adapters.database.file_system.Database import Database
 from domain import BookPrice
-from ports import IBookPriceRepository, TBookPriceListField
+from ports.database import IBookPriceRepository, TBookPriceListField
 
 
 class BookPriceFileRepository(IBookPriceRepository):

@@ -1,4 +1,3 @@
-import base64
 import logging
 import re
 from datetime import date
@@ -6,13 +5,13 @@ from typing import cast
 
 from bs4 import BeautifulSoup, Tag
 
-from ports import HttpClientBase
+from domain import BookPrice
+from ports.http import HttpClientBase
+from ports.usecase import BookDetailsFinderBase
 
 
-class NonOfficialBookDetails:
-    """Use cases for retrieve details of a non official books"""
-
-    _isbn_matchers = [
+class BiblioAventurierBookDetailsFinder(BookDetailsFinderBase):
+    __isbn_matchers = [
         # should match ISBN 13: 978-2-07-064302-7
         re.compile(r"([\d]{3}-[\d]{1}-[\d]{2}-[\d]{6}-[\d]{1})"),
         # should match ISBN 10: 2-07-064302-7, 2-07-057492-X (X can be a digit or a letter, X is used as 10 in ISBN 10 see official documentation for more details)
@@ -20,8 +19,8 @@ class NonOfficialBookDetails:
     ]
 
     @staticmethod
-    def find_first_isbn(text: str) -> str:
-        for matcher in NonOfficialBookDetails._isbn_matchers:
+    def __find_first_isbn(text: str) -> str:
+        for matcher in BiblioAventurierBookDetailsFinder.__isbn_matchers:
             regexp_match = matcher.search(text)
             if regexp_match:
                 value = regexp_match.group(1)
@@ -30,10 +29,10 @@ class NonOfficialBookDetails:
 
         return ""
 
-    _date_matcher = re.compile(
+    __date_matcher = re.compile(
         r"((\d{0,2})[ \t]*(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre) (\d{4}))"
     )
-    _month_mapping = {
+    __month_mapping = {
         "janvier": 1,
         "février": 2,
         "mars": 3,
@@ -49,9 +48,9 @@ class NonOfficialBookDetails:
     }
 
     @staticmethod
-    def find_parution_date(text: str) -> date | None:
+    def __find_parution_date(text: str) -> date | None:
         # if no match return None
-        regexp_match = NonOfficialBookDetails._date_matcher.search(text)
+        regexp_match = BiblioAventurierBookDetailsFinder.__date_matcher.search(text)
         if regexp_match:
             # if match cut the date part from the text and convert it to iso format date string (YYYY-MM-DD), if day is missing default to 1, if month is missing default to January, if year is missing default to 1900
             # extract from matcher the day, month and year parts
@@ -61,7 +60,9 @@ class NonOfficialBookDetails:
 
             # convert month name to month number then other details
             day = int(day_str) if day_str else 1
-            month = NonOfficialBookDetails._month_mapping.get(month_str.lower(), 1)
+            month = BiblioAventurierBookDetailsFinder.__month_mapping.get(
+                month_str.lower(), 1
+            )
             year = int(year_str) if year_str else 1900
 
             # some regex match can have invalid day number (e.g. 31/02/2022), in this case we default to 1 to avoid crashing the app, we want to keep the month and year information even if the day is invalid
@@ -76,17 +77,43 @@ class NonOfficialBookDetails:
 
         return None
 
-    def __init__(self, soup: BeautifulSoup):
-        self._logger = logging.getLogger(self.__class__.__name__)
-        self._soup = soup
+    def __init__(self, html: str):
+        self.__logger = logging.getLogger(self.__class__.__name__)
+        self.__soup = BeautifulSoup(html, "html.parser")
 
-    def numero(self, options: dict[str, int]) -> int:
+    def isbn(self, default: str) -> str:
+        root = self.__soup.select_one(
+            "table#AutoNumber2 tr:nth-child(2) > td:nth-child(2)"
+        )
+        if not root:
+            self.__logger.error("No potential ISBN information found in the page.")
+            return default
+
+        # les details du livre sur ce site est sois directement dans le <td /> soit dans un 'p' (<td><p></td>)
+        children = list([e for e in root.children if not isinstance(e, str)])
+        if len(children) == 1 and cast(Tag, children[0]).name == "p":
+            root = cast(Tag, children[0])
+
+        isbn_list: list[str] = []
+        texts = [
+            e.get_text(strip=True) for e in root.children if not isinstance(e, str)
+        ]
+        valid_texts = [t for t in texts if t.count("-")]
+
+        for text in valid_texts:
+            value: str = BiblioAventurierBookDetailsFinder.__find_first_isbn(text)
+            if value:
+                isbn_list.append(value.replace("-", ""))
+
+        return isbn_list[-1] if len(isbn_list) and isbn_list[-1] else default
+
+    def numero(self) -> int:
         # arrange
         text_prefix = "loup solitaire n° "
         selector = "table#AutoNumber2 tr:nth-child(2) > td:nth-child(2) a"
 
         # action
-        element = self._soup.select_one(selector)
+        element = self.__soup.select_one(selector)
         if element:
             text = element.get_text(strip=True)
             if text.lower().startswith(text_prefix):
@@ -94,14 +121,13 @@ class NonOfficialBookDetails:
                 if numero.isdigit():
                     return int(numero)
 
-        options["id"] -= 1
-        return options["id"]
+        return self._get_invalid_numero()
 
-    def title(self, default_value: str) -> str:
-        element = self._soup.select_one("table#AutoNumber1 p:nth-child(1)")
+    def title(self, default: str) -> str:
+        element = self.__soup.select_one("table#AutoNumber1 p:nth-child(1)")
         if not element:
-            self._logger.error("No potential title information found in the page.")
-            return default_value
+            self.__logger.error("No potential title information found in the page.")
+            return default
 
         titre = element.get_text(strip=True)
         # retire les parenthèses et le texte "Voir..." qui suit, présent dans les titres du premier tome qui a 2 versions: "classique" et "augmentée"
@@ -115,7 +141,7 @@ class NonOfficialBookDetails:
     def authors(self) -> list[str]:
         # Note:
         # authors are mixed with other details (such like translators and original title) in the same html structure but fortunately there is a pattern we can use to extract authors
-        root = self._soup.select_one(
+        root = self.__soup.select_one(
             "table#AutoNumber2 tr:nth-child(2) > td:nth-child(2) font:first-child"
         )
 
@@ -131,7 +157,7 @@ class NonOfficialBookDetails:
             else []
         )
         if not elements:
-            self._logger.error("No potential author information found in the page.")
+            self.__logger.error("No potential author information found in the page.")
             return []
 
         # pattern : step 2 : remove number of book wich is get from numero method (selector seem different but target the same element)
@@ -162,20 +188,20 @@ class NonOfficialBookDetails:
 
         return results
 
-    def last_parution_date(self, default_value: str) -> str:
+    def lastParutionDate(self, default: str) -> str:
         elements = [
             *list(
-                self._soup.select(
+                self.__soup.select(
                     "table#AutoNumber2 tr:nth-child(2) > td:nth-child(2) font"
                 )
             ),
-            self._soup.select_one(  # for book n°22
+            self.__soup.select_one(  # for book n°22
                 "table#AutoNumber2 tr:nth-child(2) > td:nth-child(2) > span"
             ),
         ]
         if not elements:
-            self._logger.error("No potential publication date found in the page.")
-            return default_value
+            self.__logger.error("No potential publication date found in the page.")
+            return default
 
         try:
             results: list[date] = []
@@ -195,65 +221,58 @@ class NonOfficialBookDetails:
                 if not value or value.lower().startswith("loup solitaire n°"):
                     continue  # we don't care about the book number or not valid text
 
-                parution_date = NonOfficialBookDetails.find_parution_date(value)
+                parution_date = BiblioAventurierBookDetailsFinder.__find_parution_date(
+                    value
+                )
                 if parution_date:
                     results.append(parution_date)
 
             # Keep the most recent publication date when several dates are present.
-            return max(results).isoformat() if results else default_value
+            return max(results).isoformat() if results else default
         except Exception as e:
-            self._logger.warning(
+            self.__logger.warning(
                 f"Failed to parse publication date - reason: {type(e).__name__}: {e}",
                 exc_info=True,
             )
-        return default_value
+        return default
 
-    def isbn(self, default_value: str) -> str:
-        root = self._soup.select_one(
-            "table#AutoNumber2 tr:nth-child(2) > td:nth-child(2)"
-        )
-        if not root:
-            self._logger.error("No potential ISBN information found in the page.")
-            return default_value
-
-        # les details du livre sur ce site est sois directement dans le <td /> soit dans un 'p' (<td><p></td>)
-        children = list([e for e in root.children if not isinstance(e, str)])
-        if len(children) == 1 and cast(Tag, children[0]).name == "p":
-            root = cast(Tag, children[0])
-
-        isbn_list: list[str] = []
-        texts = [
-            e.get_text(strip=True) for e in root.children if not isinstance(e, str)
-        ]
-        valid_texts = [t for t in texts if t.count("-")]
-
-        for text in valid_texts:
-            value: str = NonOfficialBookDetails.find_first_isbn(text)
-            if value:
-                isbn_list.append(value.replace("-", ""))
-
-        return isbn_list[-1] if len(isbn_list) and isbn_list[-1] else default_value
-
-    def description(self, default_value: str) -> str:
-        element = self._soup.select_one(
+    def description(self, default: str) -> str:
+        element = self.__soup.select_one(
             "table#AutoNumber2 tr:nth-child(3) td p:nth-child(5)"
         )
         if not element:
-            self._logger.error(
+            self.__logger.error(
                 "No potential description information found in the page."
             )
-            return default_value
+            return default
+
         description = element.get_text(strip=True)  # type: ignore
         description = re.sub(r"\s+", " ", description).strip()
         return description
 
-    async def image_url(
-        self, client: HttpClientBase, url_base: str, default_value: str = ""
-    ) -> str:
-        elements = self._soup.select("table#AutoNumber1 a")
+    def official(self) -> bool:
+        return False
+
+    def prices(self, **kwargs) -> list[BookPrice]:
+        raise NotImplementedError(
+            "The prices cannot be retrieved from BiblioAventurierBookDetailsFinder. Use the dedicated PriceSourceUsecases for price retrieval."
+        )
+
+    async def image(self, client: HttpClientBase, **kwargs) -> str:
+        # check parameters
+        url_base = kwargs.get("url_base", "")
+        if not url_base:
+            raise ValueError(
+                "'url_base' property of type 'str' must be provided in kwargs for image extraction."
+            )
+        elif not isinstance(url_base, str):
+            raise ValueError("'url_base' is not of type 'str' for image extraction.")
+
+        # action
+        elements = self.__soup.select("table#AutoNumber1 a")
         if not elements:
-            self._logger.error("No potential image information found in the page.")
-            return default_value
+            self.__logger.error("No potential image information found in the page.")
+            return ""
 
         urls = [
             cast(str, element.attrs["href"]).replace("../..", url_base)
@@ -261,25 +280,21 @@ class NonOfficialBookDetails:
             if element.name == "a" and "href" in element.attrs
         ]
 
-        url = urls[-1].replace("../..", url_base) if len(urls) else default_value
+        url = urls[-1].replace("../..", url_base) if len(urls) else ""
         if not url:
-            return default_value
+            return ""
 
         try:
-            image_bytes = await client.get_content(url)
-            image = base64.b64encode(image_bytes).decode("utf-8")
-            return image
+            return await self._fetch_image(client, url)
         except Exception as e:
-            self._logger.warning(
+            self.__logger.warning(
                 f"Failed to fetch or encode image from URL: {url} - reason: {type(e).__name__}: {e}",
                 exc_info=True,
             )
-            return default_value
-
-        return default_value
+            return ""
 
     def is_classic_version(self) -> bool:
-        element = self._soup.select_one("table#AutoNumber1 p:nth-child(1)")
+        element = self.__soup.select_one("table#AutoNumber1 p:nth-child(1)")
         if not element:
             return False
 

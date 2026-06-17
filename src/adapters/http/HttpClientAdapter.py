@@ -5,7 +5,7 @@ from typing import TypeVar, cast
 import httpx
 
 from adapters.http.HttpxLogHandler import HttpxLogHandler
-from ports import HttpClientBase
+from ports.http import HttpClientBase
 
 TResponse = TypeVar("TResponse")
 TData = TypeVar("TData")

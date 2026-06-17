@@ -3,7 +3,7 @@ from collections.abc import Callable
 
 from adapters.database.file_system.Database import Database
 from domain import Book, BookPrice
-from ports import (
+from ports.database import (
     IBookPriceRepository,
     IBookRepository,
     TBookListField,

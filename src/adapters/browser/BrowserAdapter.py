@@ -7,7 +7,7 @@ from adapters.browser.types import (
     TElement,
     TPage,
 )
-from ports import BrowserInterface, PageHandlerInterface
+from ports.browser import BrowserInterface, PageHandlerInterface
 
 
 class BrowserAdapter(BrowserInterface[TBrowser, TPage, TElement]):

@@ -1,9 +1,10 @@
 import asyncio
 import re
+from collections.abc import Callable
 
 from domain import Book, BookPrice
-from ports import BrowserInterface, BrowserTypes
-from usecases.price_sources.AmazonPriceSourceDetails import AmazonPriceSourceDetails
+from ports.browser import BrowserInterface, BrowserTypes
+from ports.usecase import PriceDetailsFinderBase
 from usecases.price_sources.PriceSourceUsecasesBase import PriceSourceUsecasesBase
 
 
@@ -11,10 +12,12 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
     def __init__(
         self,
         url_base: str,
+        details_factory: Callable[[str], PriceDetailsFinderBase],
         parallel_calls: int = 5,
         request_delay_seconds: float = 1.0,
     ):
         super().__init__(url_base, parallel_calls)
+        self.__details_factory = details_factory
         self.__request_delay_seconds = request_delay_seconds
 
     @staticmethod
@@ -93,12 +96,12 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
         html = await page.html()
         close_page_action = page.close()
 
-        details = AmazonPriceSourceDetails(html)
+        details = self.__details_factory(html)
         price, currency = details.price_and_currency(
-            self.__normalize_title_by_regexp_pattern(book.titre),
-            book.isbn,
+            isbn=book.isbn,
+            title_pattern=self.__normalize_title_by_regexp_pattern(book.titre),
         )
-        url = details.url(self.url_base, book.isbn)
+        url = details.url(isbn=book.isbn, url_base=self.url_base)
 
         await asyncio.gather(close_page_action)
         return BookPrice(

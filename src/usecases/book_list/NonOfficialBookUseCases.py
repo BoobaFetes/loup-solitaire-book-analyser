@@ -1,12 +1,10 @@
 import asyncio
 import logging
-import re
-
-from bs4 import BeautifulSoup
+from collections.abc import Callable
 
 from domain import Book
-from ports import HttpClientBase
-from usecases.book_list.NonOfficialBookDetails import NonOfficialBookDetails
+from ports.http import HttpClientBase
+from ports.usecase import BookDetailsFinderBase, BookListFinderBase
 
 
 class NonOfficialBookUseCases:
@@ -14,30 +12,16 @@ class NonOfficialBookUseCases:
 
     _url_base: str = "https://www.bibliotheque-des-aventuriers.com/"
 
-    _isbn_matchers = [
-        # should match ISBN 13: 978-2-07-064302-7
-        re.compile(r"([\d]{3}-[\d]{1}-[\d]{2}-[\d]{6}-[\d]{1})"),
-        # should match ISBN 10: 2-07-064302-7, 2-07-057492-X (X can be a digit or a letter, X is used as 10 in ISBN 10 see official documentation for more details)
-        re.compile(r"([\d]{1}-[\d]{2}-[\d]{6}-[\dX]{1})"),
-    ]
-
-    @staticmethod
-    def find_first_isbn(text: str) -> str:
-        for matcher in NonOfficialBookUseCases._isbn_matchers:
-            regexp_match = matcher.search(text)
-            if regexp_match:
-                value = regexp_match.group(1)
-                if value:
-                    return value.replace("-", "")
-
-        return ""
-
     def __init__(
         self,
         client: HttpClientBase,
+        list_factory: Callable[[str], BookListFinderBase],
+        details_factory: Callable[[str], BookDetailsFinderBase],
         parallel_calls: int = 5,
     ):
         self._client = client
+        self.__list_factory = list_factory
+        self._details_factory = details_factory
         self._logger = logging.getLogger(self.__class__.__name__)
         self._parallel_calls = parallel_calls
 
@@ -72,16 +56,7 @@ class NonOfficialBookUseCases:
             )
             return []
 
-        # parse HTML content to find book detail links
-        soup = BeautifulSoup(html, "html.parser")
-        anchors = soup.select(
-            "body > table > tr > td:nth-child(1) > table:nth-child(2) > tr > td:nth-child(2) > table > tr > td > p:nth-child(9) a"
-        )
-
-        return [
-            self._url_base + str(anchor["href"]).replace("../", "")
-            for anchor in anchors
-        ]
+        return self.__list_factory(html).urls(self._url_base)
 
     # endregion
 
@@ -89,7 +64,6 @@ class NonOfficialBookUseCases:
         self, url: str, client: HttpClientBase | None = None
     ) -> Book | None:
         book: Book | None = None
-        numero_options = {"id": 0}
         try:
             self._logger.info(
                 f"get book details from : {url}",
@@ -101,22 +75,20 @@ class NonOfficialBookUseCases:
                 self._logger.warning(f"No HTML content retrieved for book URL {url}")
                 return None
 
-            soup = BeautifulSoup(html, "html.parser")
-
-            details = NonOfficialBookDetails(soup)
+            details = self._details_factory(html)
             if details.is_classic_version():
                 self._logger.info(
                     "Book is a classic version, skipping to avoid duplicates with official source",
                 )
                 return None
 
-            id = numero = details.numero(numero_options)
+            id = numero = details.numero()
             if numero < 0:
                 self._logger.error(
-                    f"Could not find a valid book's number at {url}. Defaulting to {numero_options['id']}.",
+                    f"Could not find a valid book's number at {url}. Defaulting to {numero}.",
                 )
 
-            image = await details.image_url(active_client, self._url_base, "")
+            image = await details.image(active_client, url_base=self._url_base)
             if not image:
                 self._logger.warning(
                     f"No image content fetched for book URL: {url}",
@@ -128,7 +100,7 @@ class NonOfficialBookUseCases:
                 numero=numero,
                 titre=details.title(""),
                 authors=details.authors(),
-                lastParutionDate=details.last_parution_date("1900-01-01"),
+                lastParutionDate=details.lastParutionDate("1900-01-01"),
                 description=details.description(""),
                 isbn=details.isbn(""),
                 image=image,
@@ -142,6 +114,3 @@ class NonOfficialBookUseCases:
             )
 
         return book
-
-    def get_total_and_average_by_currency(self) -> dict[str, tuple[float, float]]:
-        raise NotImplementedError

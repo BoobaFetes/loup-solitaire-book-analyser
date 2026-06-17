@@ -1,7 +1,7 @@
 import logging
 
 from adapters.database.file_system.Database import Database
-from ports import IDbContext
+from ports.database import IDbContext
 
 
 class DbContext(IDbContext):

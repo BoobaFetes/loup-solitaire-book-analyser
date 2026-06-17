@@ -3,7 +3,7 @@ from typing import Literal
 from adapters.browser.types import TElement, TPage
 from adapters.os.HtmlFileBackup import HtmlFileBackup
 from adapters.RetryAction import RetryAction
-from ports import HtmlElementActionInterface
+from ports.browser import HtmlElementActionInterface
 
 
 class HtmlElementActionAdapter(HtmlElementActionInterface[TPage, TElement]):

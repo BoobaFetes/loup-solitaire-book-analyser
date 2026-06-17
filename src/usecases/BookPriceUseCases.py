@@ -1,10 +1,10 @@
 import copy
 import logging
 
-from adapters.browser.types import TBrowser, TElement, TPage
 from domain import Book, BookPrice
-from ports import BrowserInterface, IUnitOfWork
-from usecases.price_sources import PriceSourceUsecasesBase
+from ports.browser import BrowserInterface, BrowserTypes
+from ports.database import IUnitOfWork
+from usecases.price_sources.PriceSourceUsecasesBase import PriceSourceUsecasesBase
 
 
 class BookPriceUseCases:
@@ -15,7 +15,9 @@ class BookPriceUseCases:
     def __init__(
         self,
         unit_of_work: IUnitOfWork,
-        browser: BrowserInterface[TBrowser, TPage, TElement],
+        browser: BrowserInterface[
+            BrowserTypes.TBrowser, BrowserTypes.TPage, BrowserTypes.TElement
+        ],
         sources: list[PriceSourceUsecasesBase],
     ):
         self._unit_of_work = unit_of_work
