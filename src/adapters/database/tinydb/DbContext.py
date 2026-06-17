@@ -4,7 +4,7 @@ from pathlib import Path
 from tinydb import TinyDB
 from tinydb.table import Table
 
-from ports import IDbContext
+from ports.database import IDbContext
 
 
 class DbContext(IDbContext):

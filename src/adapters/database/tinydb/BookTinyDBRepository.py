@@ -7,7 +7,7 @@ from tinydb.table import Document, Table
 
 from adapters.database.tinydb.DbContext import DbContext
 from domain import Book, BookPrice
-from ports import (
+from ports.database import (
     IBookPriceRepository,
     IBookRepository,
     TBookListField,

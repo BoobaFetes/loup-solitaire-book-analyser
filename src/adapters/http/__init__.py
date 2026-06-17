@@ -1,4 +1,4 @@
-from adapters.http import HttpClientAdapter
+from adapters.http.HttpClientAdapter import HttpClientAdapter
 
 __all__ = [
     "HttpClientAdapter",

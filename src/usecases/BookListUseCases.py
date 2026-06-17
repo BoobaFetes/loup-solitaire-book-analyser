@@ -1,7 +1,8 @@
 import logging
 
 from domain import Book
-from ports import HttpClientBase, IUnitOfWork
+from ports.database import IUnitOfWork
+from ports.http import HttpClientBase
 from usecases.book_list import NonOfficialBookUseCases, OfficialBookUseCases
 
 

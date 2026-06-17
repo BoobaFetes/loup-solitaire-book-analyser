@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from domain import Book, BookPrice
-from ports import IFileSystem
+from ports.os import IFileSystem
 
 TStoreDataConverter = TypeVar("TStoreDataConverter")
 

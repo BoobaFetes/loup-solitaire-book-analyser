@@ -1,13 +1,9 @@
-from adapters.browser import BrowserAdapter, PageHandlerAdapter
-from adapters.database.file_system import BookFileRepository, BookPriceFileRepository
-from adapters.http.HttpClientAdapter import HttpClientAdapter
-from adapters.os.FileSystemAdapter import FileSystemAdapter
+from adapters import browser, database, http, os, usecase
 
 __all__ = [
-    "BrowserAdapter",
-    "PageHandlerAdapter",
-    "BookFileRepository",
-    "BookPriceFileRepository",
-    "FileSystemAdapter",
-    "HttpClientAdapter",
+    "browser",
+    "database",
+    "http",
+    "os",
+    "usecase",
 ]

@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from ports import IFileSystem
+from ports.os import IFileSystem
 
 
 class FileSystemAdapter(IFileSystem):

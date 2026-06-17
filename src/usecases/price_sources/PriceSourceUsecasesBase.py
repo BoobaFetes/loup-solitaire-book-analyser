@@ -1,7 +1,7 @@
 import logging
 
 from domain import Book, BookPrice
-from ports import BrowserInterface, BrowserTypes
+from ports.browser import BrowserInterface, BrowserTypes
 
 
 class PriceSourceUsecasesBase:
@@ -13,11 +13,6 @@ class PriceSourceUsecasesBase:
         self.url_base = url_base
         self._logger = logging.getLogger(self.__class__.__name__)
         self._parallel_calls = parallel_calls
-
-    def _build_search_url_by_isbn(self, isbn: str) -> str:
-        raise NotImplementedError(
-            "_build_search_url_by_isbn method must be implemented by subclasses"
-        )
 
     async def fetch_bookprices(
         self,

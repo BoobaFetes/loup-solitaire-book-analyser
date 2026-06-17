@@ -7,7 +7,7 @@ from adapters.database.file_system import (
     DbContext,
 )
 from adapters.database.UnitOfWork import UnitOfWork
-from ports import IFileSystem
+from ports.os import IFileSystem
 
 
 def make_unit_of_work(
