@@ -3,7 +3,7 @@ import logging
 from domain import Book
 from ports.database import IUnitOfWork
 from ports.http import HttpClientBase
-from usecases.book_list import NonOfficialBookUseCases, OfficialBookUseCases
+from usecases.book import NonOfficialBookUseCases, OfficialBookUseCases
 
 
 class BookListUseCases:
@@ -18,36 +18,33 @@ class BookListUseCases:
         official_book: OfficialBookUseCases,
         non_official_book: NonOfficialBookUseCases,
     ):
-        self._unit_of_work = unit_of_work
-        self._client = client
-        self._logger = logging.getLogger(self.__class__.__name__)
-        self._official_book: OfficialBookUseCases = official_book
-        self._non_official_book: NonOfficialBookUseCases = non_official_book
+        self.__unit_of_work = unit_of_work
+        self.__client = client
+        self.__logger = logging.getLogger(self.__class__.__name__)
+        self.__official_book: OfficialBookUseCases = official_book
+        self.__non_official_book: NonOfficialBookUseCases = non_official_book
 
-    async def fetch_books(self, client: HttpClientBase | None = None) -> list[Book]:
+    async def fetch_books(self) -> list[Book]:
         # arrange
         books_sources: list[list[Book]] = []
 
         # action
-        self._logger.info("Fetching books from sources")
-        active_client = client or self._client
-        async with active_client as client_instance:
-            books_sources.append(await self._official_book.fetch_books(client_instance))
-            books_sources.append(
-                await self._non_official_book.fetch_books(client_instance)
-            )
+        self.__logger.info("Fetching books from sources")
+        async with self.__client as client:
+            books_sources.append(await self.__official_book.fetch_books(client))
+            books_sources.append(await self.__non_official_book.fetch_books(client))
 
         books: list[Book] = self.__merge_sources(books_sources[0], books_sources[1])
 
         # tri par id de livre (on s'attend à id==numero) pour simplifier la lecture et la maintenance
         books.sort(key=lambda b: b.id)
 
-        self._logger.info("records books in repository")
-        stored_items = await self._unit_of_work.books.upsert_many(books)
+        self.__logger.info("records books in repository")
+        stored_items = await self.__unit_of_work.books.upsert_many(books)
         if len(stored_items) != len(books):
-            self._logger.warning("Not all books were upserted to the repository.")
+            self.__logger.warning("Not all books were upserted to the repository.")
 
-        return await self._unit_of_work.books.list()
+        return await self.__unit_of_work.books.list()
 
     def __merge_sources(
         self, official_books: list[Book], non_official_books: list[Book]
@@ -79,4 +76,4 @@ class BookListUseCases:
         return list(books_set)
 
     async def list(self) -> list[Book]:
-        return await self._unit_of_work.books.list()
+        return await self.__unit_of_work.books.list()

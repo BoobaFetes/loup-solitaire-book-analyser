@@ -1,25 +1,24 @@
 import asyncio
 import logging
 from collections.abc import Callable
-from typing import Literal
 
 from domain import Book
 from ports.http import HttpClientBase
 from ports.usecase import BookDetailsFinderBase, BookListFinderBase
 
 
-class OfficialBookUseCases:
+class NonOfficialBookUseCases:
     """Use cases for managing books."""
-
-    _url_base: str = "https://www.gallimard-jeunesse.fr"
 
     def __init__(
         self,
+        base_url: str,
         client: HttpClientBase,
         list_factory: Callable[[str], BookListFinderBase],
         details_factory: Callable[[str], BookDetailsFinderBase],
         parallel_calls: int = 5,
     ):
+        self.__url_base = base_url
         self.__client = client
         self.__list_factory = list_factory
         self.__details_factory = details_factory
@@ -31,7 +30,7 @@ class OfficialBookUseCases:
 
         active_client = client or self.__client
         async with active_client as client_instance:
-            self.__logger.info(f"Finding urls of books from {self._url_base}")
+            self.__logger.info(f"Finding urls of books from {self.__url_base}")
             urls = await self._fetch_book_urls(client_instance)
 
             self.__logger.info(f"Fetching book details for {len(urls)} URLs")
@@ -47,31 +46,20 @@ class OfficialBookUseCases:
 
     async def _fetch_book_urls(self, client: HttpClientBase):
         # arrange
-        result: list[str] = []
-        segment: str = r"/catalogue/fragment?page=1&text=loup%20solitaire"
+        index_page_url = self.__url_base + r"menu/4_serie/loup_solitaire.htm"
 
-        while segment:
-            # fetch page content
-            url = f"{self._url_base}{segment}"
-            json = await client.get_json(url)
-            if not json:
-                self.__logger.warning(f"No JSON content retrieved for book URL {url}")
-                return []
+        # fetch page content
+        html = await client.get_text(index_page_url, "latin-1")
+        if not html:
+            self.__logger.warning(
+                f"No HTML content retrieved for index page {index_page_url}"
+            )
+            return []
 
-            # parse HTML content to find book detail links
-            html = json.get("html", "")
-            if html:
-                result.extend(self.__list_factory(html).urls(self._url_base))
-            else:
-                self.__logger.warning(f"No HTML content found at '{url}'")
-
-            # check for next page URL
-            next_url: str | Literal[False] = json.get("next-url", False)
-            segment = next_url if next_url else ""
-
-        return result
+        return self.__list_factory(html).urls(self.__url_base)
 
     # endregion
+
     async def fetch_book(
         self, url: str, client: HttpClientBase | None = None
     ) -> Book | None:
@@ -80,17 +68,17 @@ class OfficialBookUseCases:
             self.__logger.info(
                 f"get book details from : {url}",
             )
+
             active_client = client or self.__client
-            html = await active_client.get_text(url)
+            html = await active_client.get_text(url, "latin-1")
             if not html:
                 self.__logger.warning(f"No HTML content retrieved for book URL {url}")
                 return None
 
             details = self.__details_factory(html)
-            authors = details.authors()
-            if "Joe Dever" not in authors:
-                self.__logger.warning(
-                    f"Skipping book at {url}. It doesn't match authors.",
+            if details.is_classic_version():
+                self.__logger.info(
+                    "Book is a classic version, skipping to avoid duplicates with official source",
                 )
                 return None
 
@@ -99,19 +87,25 @@ class OfficialBookUseCases:
                 self.__logger.error(
                     f"Could not find a valid book's number at {url}. Defaulting to {numero}.",
                 )
-            isbn = details.isbn("")
+
+            image = await details.image(active_client, base_url=self.__url_base)
+            if not image:
+                self.__logger.warning(
+                    f"No image content fetched for book URL: {url}",
+                )
+
             book = Book(
                 id=id,
                 url=url,
                 numero=numero,
                 titre=details.title(""),
-                authors=authors,
+                authors=details.authors(),
                 lastParutionDate=details.lastParutionDate("1900-01-01"),
                 description=details.description(""),
-                isbn=isbn,
-                image=await details.image(active_client),
-                prices=details.prices(url=url, isbn=isbn),
-                official=True,
+                isbn=details.isbn(""),
+                image=image,
+                prices=[],
+                official=False,
             )
         except Exception as e:
             self.__logger.error(

@@ -100,6 +100,12 @@ class BookTinyDBRepository(IBookRepository):
         return results
 
     async def upsert(self, entity: Book) -> Book | None:
+        # NOTE :
+        # la gestion des nested objects (BookPrice) est trop compliquée car il faut gérer les cas où: :
+        # 1. un prix est orphelin -> delete
+        # 2. un prix est modifié (cf la methode __eq__) -> update
+        # 3. un prix est nouveau (pas déjà dans la db) -> insert
+        # DONC on fait simple -> on utilise bêtement upsert_many() sur les prix, nous utiliserons dans une prochaine evolution un ORM capable de se charger de ces cas (ex: SQLAlchemy, Tortoise ORM, etc...)
         try:
             item = copy.deepcopy(entity)
             prices_to_store: list[BookPrice] = item.prices

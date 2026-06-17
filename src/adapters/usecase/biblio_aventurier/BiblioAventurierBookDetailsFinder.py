@@ -5,7 +5,6 @@ from typing import cast
 
 from bs4 import BeautifulSoup, Tag
 
-from domain import BookPrice
 from ports.http import HttpClientBase
 from ports.usecase import BookDetailsFinderBase
 
@@ -253,20 +252,15 @@ class BiblioAventurierBookDetailsFinder(BookDetailsFinderBase):
     def official(self) -> bool:
         return False
 
-    def prices(self, **kwargs) -> list[BookPrice]:
-        raise NotImplementedError(
-            "The prices cannot be retrieved from BiblioAventurierBookDetailsFinder. Use the dedicated PriceSourceUsecases for price retrieval."
-        )
-
     async def image(self, client: HttpClientBase, **kwargs) -> str:
         # check parameters
-        url_base = kwargs.get("url_base", "")
-        if not url_base:
+        base_url = kwargs.get("base_url", "")
+        if not base_url:
             raise ValueError(
-                "'url_base' property of type 'str' must be provided in kwargs for image extraction."
+                "'base_url' property of type 'str' must be provided in kwargs for image extraction."
             )
-        elif not isinstance(url_base, str):
-            raise ValueError("'url_base' is not of type 'str' for image extraction.")
+        elif not isinstance(base_url, str):
+            raise ValueError("'base_url' is not of type 'str' for image extraction.")
 
         # action
         elements = self.__soup.select("table#AutoNumber1 a")
@@ -275,12 +269,12 @@ class BiblioAventurierBookDetailsFinder(BookDetailsFinderBase):
             return ""
 
         urls = [
-            cast(str, element.attrs["href"]).replace("../..", url_base)
+            cast(str, element.attrs["href"]).replace("../..", base_url)
             for element in elements
             if element.name == "a" and "href" in element.attrs
         ]
 
-        url = urls[-1].replace("../..", url_base) if len(urls) else ""
+        url = urls[-1].replace("../..", base_url) if len(urls) else ""
         if not url:
             return ""
 
