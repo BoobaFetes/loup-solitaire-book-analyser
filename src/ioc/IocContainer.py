@@ -7,13 +7,12 @@ from typing import TypeVar, cast
 from dependency_injector import containers, providers
 
 from adapters import (
-    BookFileRepository,
-    BookPriceFileRepository,
     BrowserAdapter,
     FileSystemAdapter,
     HttpClientAdapter,
+    PageHandlerAdapter,
 )
-from adapters.BrowserHandlers.PageHandlerAdapter import PageHandlerAdapter
+from adapters.database.tinydb import make_unit_of_work
 from usecases import BookListUseCases, BookPriceUseCases
 from usecases.book_list.NonOfficialBookUseCases import NonOfficialBookUseCases
 from usecases.book_list.OfficialBookUseCases import OfficialBookUseCases
@@ -57,52 +56,8 @@ class IocContainer(containers.DeclarativeContainer):
 
     # endregion
 
-    # region adapters (ports implementation)
+    # region browser adapters
 
-    http_client = providers.Singleton(
-        HttpClientAdapter,
-        retry_delay=config.api_timeout,
-        headers=providers.Dict({"User-Agent": config.browser_user_agent}),
-    )
-
-    file_system = providers.Singleton(
-        FileSystemAdapter,
-        path=config.root_dir,
-    )
-    book_price_repository = providers.Singleton(
-        BookPriceFileRepository,
-        fs=file_system,
-        connection_string=config.connection_string,
-    )
-    book_repository = providers.Singleton(
-        BookFileRepository,
-        fs=file_system,
-        connection_string=config.connection_string,
-        price_repository=book_price_repository,
-    )
-    # endregion
-
-    # region usecases
-
-    # region book_list usecases
-
-    official_book_usecases = providers.Singleton(
-        OfficialBookUseCases,
-        repository=book_repository,
-        client=http_client,
-        parallel_calls=config.api_parallel_calls,
-    )
-
-    non_official_book_usecases = providers.Singleton(
-        NonOfficialBookUseCases,
-        repository=book_repository,
-        client=http_client,
-        parallel_calls=config.api_parallel_calls,
-    )
-
-    # endregion
-
-    # region book price usecases
     browser = providers.Singleton(
         BrowserAdapter,
         page_factory=lambda page: PageHandlerAdapter(page),
@@ -125,6 +80,52 @@ class IocContainer(containers.DeclarativeContainer):
         ),
     )
 
+    # endregion
+
+    # region http adapters
+
+    http_client = providers.Singleton(
+        HttpClientAdapter,
+        retry_delay=config.api_timeout,
+        headers=providers.Dict({"User-Agent": config.browser_user_agent}),
+    )
+
+    # endregion
+
+    # region os adapters
+
+    file_system = providers.Singleton(
+        FileSystemAdapter,
+        path=config.root_dir,
+    )
+
+    # endregion
+
+    # region database adapters
+
+    unit_of_work = make_unit_of_work(config=config)
+
+    # endregion
+
+    # region usecases
+
+    # region book_list usecases
+
+    official_book_usecases = providers.Singleton(
+        OfficialBookUseCases,
+        client=http_client,
+        parallel_calls=config.api_parallel_calls,
+    )
+
+    non_official_book_usecases = providers.Singleton(
+        NonOfficialBookUseCases,
+        client=http_client,
+        parallel_calls=config.api_parallel_calls,
+    )
+
+    # endregion
+
+    # region book price usecases
     amazon_price_source_usecases = providers.Singleton(
         AmazonPriceSourceUsecases,
         url_base="https://www.amazon.fr/",
@@ -136,7 +137,7 @@ class IocContainer(containers.DeclarativeContainer):
 
     book_list_usecases = providers.Singleton(
         BookListUseCases,
-        repository=book_repository,
+        unit_of_work=unit_of_work,
         client=http_client,
         official_book=official_book_usecases,
         non_official_book=non_official_book_usecases,
@@ -144,7 +145,7 @@ class IocContainer(containers.DeclarativeContainer):
 
     book_price_usecases = providers.Singleton(
         BookPriceUseCases,
-        repository=book_price_repository,
+        unit_of_work=unit_of_work,
         browser=browser,
         sources=providers.List(
             amazon_price_source_usecases,

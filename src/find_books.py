@@ -19,7 +19,8 @@ async def main():
     book_list_usecases = container.book_list_usecases()
 
     # action
-    books = await book_list_usecases.fetch_books()
+    async with container.unit_of_work():
+        books = await book_list_usecases.fetch_books()
 
     # pour le moment on fait kiss pour la persistance de données => direct dans un fichier json
     # pour l'hebergement on pensera donc à un volume pour l'instant sachant qu'il faudra trouver un chart helm pour la base de donnée qui reste à choisir => postgresql, tinydb, etc

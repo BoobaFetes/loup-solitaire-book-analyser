@@ -20,9 +20,10 @@ async def main():
     book_prices = container.book_price_usecases()
 
     logger.info("Starting find prices process")
-    pre_books = await book_list.list()
-    await book_prices.fetch_prices(pre_books)
-    books = await book_prices.bind_prices_to_books(pre_books)
+    async with container.unit_of_work():
+        pre_books = await book_list.list()
+        await book_prices.fetch_prices(pre_books)
+        books = await book_prices.bind_prices_to_books(pre_books)
 
     logger.info("")
     logger.info("summary:")
