@@ -12,12 +12,7 @@ from adapters import (
     HttpClientAdapter,
     PageHandlerAdapter,
 )
-from adapters.database import UnitOfWork
-from adapters.database.tinydb import (
-    BookPriceTinyDBRepository,
-    BookTinyDBRepository,
-    DbContext,
-)
+from adapters.database.tinydb import make_unit_of_work
 from usecases import BookListUseCases, BookPriceUseCases
 from usecases.book_list.NonOfficialBookUseCases import NonOfficialBookUseCases
 from usecases.book_list.OfficialBookUseCases import OfficialBookUseCases
@@ -40,26 +35,6 @@ def _make_logging_handlers(root_dir: str, log_file: str) -> list[Handler]:
         # garde aussi les logs console pour faciliter le développement et le debug ou voir directement dans k8s
         StreamHandler(),
     ]
-
-
-def _make_unit_of_work(
-    config: providers.Configuration,
-) -> providers.Singleton[UnitOfWork]:
-    context = providers.Singleton(
-        DbContext,
-        connection_string=config.connection_string,
-    )
-    prices = providers.Singleton(
-        BookPriceTinyDBRepository,
-        context=context,
-    )
-    books = providers.Singleton(
-        BookTinyDBRepository,
-        context=context,
-        prices=prices,
-    )
-
-    return providers.Singleton(UnitOfWork, context=context, books=books, prices=prices)
 
 
 class IocContainer(containers.DeclarativeContainer):
@@ -128,7 +103,7 @@ class IocContainer(containers.DeclarativeContainer):
 
     # region database adapters
 
-    unit_of_work = _make_unit_of_work(config=config)
+    unit_of_work = make_unit_of_work(config=config)
 
     # endregion
 
