@@ -35,15 +35,16 @@ class BookPriceUseCases:
         )
 
         def should_store(price: BookPrice) -> bool:
-            # on veut stocker le prix si c'est une mise à jour (prix différent ou même prix mais date différente) ou si c'est un nouveau prix
-            # if there is not price yet => add it
+            """
+            we need to add to the store if (or conditions):
+            1. there is no stored price
+            2. price has changed (if prices are equals, the stored prices willl not be updated)
+            """
             stored_price = last_prices_by_source.get(price.isbn, {}).get(price.source)
 
-            if not stored_price:
-                return True
-
-            # if prices or dates are different => add it
-            return price.date != stored_price.date or price.price != stored_price.price
+            return not stored_price or (
+                price != stored_price and price.price != stored_price.price
+            )
 
         async with self._browser as browser:
             for source in self._sources:
@@ -55,12 +56,7 @@ class BookPriceUseCases:
 
                 # on peut avoir les isbns depuis les Book mais le fait de le recupérer depuis le prices permet de s'assurer qu'ils sont bien transmis au BookPrice
                 for item in prices:
-                    # add to results for return to compare with the database
-                    # with this results, the team can check the database and see if new prices is well stored
-                    if not results.get(item.isbn):
-                        results[item.isbn] = []
-                    results[item.isbn].append(item)
-
+                    results.setdefault(item.isbn, []).append(item)
                     # add to store list only it should be
                     if should_store(item):
                         prices_to_store.append(item)
