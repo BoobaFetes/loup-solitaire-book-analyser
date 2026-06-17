@@ -11,7 +11,7 @@ class HtmlFileBackup:
 
         self._logger = logger
         self.directory = Path(os.getcwd()) / "logs/html"
-        self.directory.mkdir(exist_ok=True)
+        self.directory.mkdir(parents=True, exist_ok=True)
 
     async def save(
         self,

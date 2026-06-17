@@ -110,7 +110,7 @@ class GallimardBookDetailsFinder(BookDetailsFinderBase):
                 BookPrice(
                     isbn=isbn,
                     source="Gallimard Jeunesse",
-                    price=float(gallimard_price[0]),
+                    price=float(gallimard_price[0].replace(",", ".")),
                     currency=gallimard_price[1] if gallimard_price[1] == "€" else "",
                     url=url,
                 )
