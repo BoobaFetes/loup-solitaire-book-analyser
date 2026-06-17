@@ -1,12 +1,12 @@
 from dependency_injector import providers
 
-from adapters.database import UnitOfWork
 from adapters.database.file_system import (
     BookFileRepository,
     BookPriceFileRepository,
     Database,
     DbContext,
 )
+from adapters.database.UnitOfWork import UnitOfWork
 from ports import IFileSystem
 
 
