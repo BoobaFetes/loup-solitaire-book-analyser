@@ -1,8 +1,8 @@
 from dependency_injector import providers
 
-from adapters.database import UnitOfWork
-from adapters.database.file_system.DbContext import DbContext
 from adapters.database.tinydb import BookPriceTinyDBRepository, BookTinyDBRepository
+from adapters.database.tinydb.DbContext import DbContext
+from adapters.database.UnitOfWork import UnitOfWork
 
 
 def make_unit_of_work(
