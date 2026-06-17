@@ -7,16 +7,15 @@ from typing import TypeVar, cast
 from dependency_injector import containers, providers
 
 from adapters import (
-    BookFileRepository,
-    BookPriceFileRepository,
     BrowserAdapter,
     FileSystemAdapter,
     HttpClientAdapter,
+    PageHandlerAdapter,
 )
-from adapters.browser.PageHandlerAdapter import PageHandlerAdapter
 from adapters.database import UnitOfWork
-from adapters.database.file_system import (
-    Database,
+from adapters.database.tinydb import (
+    BookPriceTinyDBRepository,
+    BookTinyDBRepository,
     DbContext,
 )
 from usecases import BookListUseCases, BookPriceUseCases
@@ -44,31 +43,23 @@ def _make_logging_handlers(root_dir: str, log_file: str) -> list[Handler]:
 
 
 def _make_unit_of_work(
-    fs: providers.Singleton[FileSystemAdapter], config: providers.Configuration
+    config: providers.Configuration,
 ) -> providers.Singleton[UnitOfWork]:
-    database = providers.Singleton(
-        Database,
-        fs=fs,
+    context = providers.Singleton(
+        DbContext,
         connection_string=config.connection_string,
     )
     prices = providers.Singleton(
-        BookPriceFileRepository,
-        db=database,
+        BookPriceTinyDBRepository,
+        context=context,
     )
-
-    return providers.Singleton(
-        UnitOfWork,
-        context=providers.Singleton(
-            DbContext,
-            db=database,
-        ),
-        books=providers.Singleton(
-            BookFileRepository,
-            db=database,
-            prices=prices,
-        ),
+    books = providers.Singleton(
+        BookTinyDBRepository,
+        context=context,
         prices=prices,
     )
+
+    return providers.Singleton(UnitOfWork, context=context, books=books, prices=prices)
 
 
 class IocContainer(containers.DeclarativeContainer):
@@ -137,7 +128,7 @@ class IocContainer(containers.DeclarativeContainer):
 
     # region database adapters
 
-    unit_of_work = _make_unit_of_work(fs=file_system, config=config)
+    unit_of_work = _make_unit_of_work(config=config)
 
     # endregion
 

@@ -30,13 +30,13 @@ class IRepository(Generic[TDomain, TId, TListField], Protocol):
         """
         ...
 
-    async def upsert_many(self, entities: list[TDomain]) -> int:
+    async def upsert_many(self, entities: list[TDomain]) -> list[TDomain]:
         """
         Insert a list of entities or update existing ones in the repository.
 
         :param entities: The list of entities to be inserted or updated.
 
-        :return: The number of entities upserted.
+        :return: The list of entities that were upserted.
         """
         ...
 
@@ -50,13 +50,13 @@ class IRepository(Generic[TDomain, TId, TListField], Protocol):
         """
         ...
 
-    async def add_many(self, entities: list[TDomain]) -> int:
+    async def add_many(self, entities: list[TDomain]) -> list[TDomain]:
         """
         Insert a list of new entities into the repository.
 
         :param entities: The list of entities to be inserted.
 
-        :return: The number of entities added.
+        :return: The list of entities that were added.
         """
         ...
 
@@ -70,13 +70,13 @@ class IRepository(Generic[TDomain, TId, TListField], Protocol):
         """
         ...
 
-    async def update_many(self, entities: list[TDomain]) -> int:
+    async def update_many(self, entities: list[TDomain]) -> list[TDomain]:
         """
         Update a list of existing entities in the repository.
 
         :param entities: The list of entities to be updated.
 
-        :return: The number of entities updated.
+        :return: The list of entities that were updated.
         """
         ...
 
@@ -90,20 +90,31 @@ class IRepository(Generic[TDomain, TId, TListField], Protocol):
         """
         ...
 
-    async def delete(self, id: TId) -> bool:
-        """
-        Delete an entity from the repository by its ID.
 
-        :param id: The ID of the entity to be deleted.
-
-        :return: True if the entity was deleted, False otherwise.
-        """
-        ...
-
-    async def clear(self) -> bool:
-        """
-        Clear entities from the repository based on filter criteria. (delete ALL entities !! like a "TRUNCATE" operation in SQL)
-
-        :return: True if the entities were cleared, False otherwise.
-        """
-        ...
+# pas utilisé :    async def delete_many(self, ids: list[TId]) -> list[bool]:
+# pas utilisé :        """
+# pas utilisé :        Delete multiple entities from the repository by their IDs.
+# pas utilisé :
+# pas utilisé :        :param ids: The IDs of the entities to be deleted.
+# pas utilisé :
+# pas utilisé :        :return: A list of booleans indicating the success of each deletion.
+# pas utilisé :        """
+# pas utilisé :        ...
+# pas utilisé :
+# pas utilisé :    async def delete(self, id: TId) -> bool:
+# pas utilisé :        """
+# pas utilisé :        Delete an entity from the repository by its ID.
+# pas utilisé :
+# pas utilisé :        :param id: The ID of the entity to be deleted.
+# pas utilisé :
+# pas utilisé :        :return: True if the entity was deleted, False otherwise.
+# pas utilisé :        """
+# pas utilisé :        ...
+# pas utilisé :
+# pas utilisé :    async def clear(self) -> bool:
+# pas utilisé :        """
+# pas utilisé :        Clear entities from the repository based on filter criteria. (delete ALL entities !! like a "TRUNCATE" operation in SQL)
+# pas utilisé :
+# pas utilisé :        :return: True if the entities were cleared, False otherwise.
+# pas utilisé :        """
+# pas utilisé :        ...

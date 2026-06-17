@@ -67,9 +67,6 @@ class BookPriceFileRepository(IBookPriceRepository):
             if _date:
                 data = [item for item in data if item.date == _date]
 
-            self.__logger.info(
-                f"Listed {len(data)} book prices for ISBN '{_isbn}' from file system",
-            )
             return data
         except Exception as e:
             self.__logger.error(
@@ -118,7 +115,6 @@ class BookPriceFileRepository(IBookPriceRepository):
                 )
 
             await self.__db.write_price_store(data)
-            self.__logger.info(f"Upserted {ref['count']} book prices in file system")
 
             items = await self.dict_by_isbns([entity.isbn for entity in entities])
             return [item for prices in items.values() for item in prices]

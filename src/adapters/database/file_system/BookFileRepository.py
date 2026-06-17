@@ -112,7 +112,6 @@ class BookFileRepository(IBookRepository):
             await self.__db.write_book_store(data)
             await self.__prices.upsert_many(prices_to_store)
 
-            self.__logger.info(f"Upserted {ref['count']} books in file system")
             return entities
         except Exception as e:
             self.__logger.error(
