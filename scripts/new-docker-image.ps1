@@ -1,7 +1,7 @@
 #arguments
 param(
     [string]$image = "loup-solitaire-book-analyser",
-    [string]$tag = "v0.1.2"
+    [string]$tag = "v0.1.3"
 )
 $rootPath = "$psscriptroot/.."
 

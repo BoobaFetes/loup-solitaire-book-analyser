@@ -13,7 +13,7 @@ spec:
           persistentVolumeClaim:
             claimName: lsba-pvc # patched by overlay
       containers:
-        - image: loup-solitaire-book-analyser:v0.1.2
+        - image: loup-solitaire-book-analyser:v0.1.3
           name: lsba-find-books
           args: ["src/find_books.py"]
           envFrom:
@@ -60,7 +60,7 @@ spec:
           - "-c"
           - "sleep 70"
       containers:
-        - image: loup-solitaire-book-analyser:v0.1.2
+        - image: loup-solitaire-book-analyser:v0.1.3
           name: lsba-find-prices
           args: ["src/find_prices.py"]
           envFrom:
