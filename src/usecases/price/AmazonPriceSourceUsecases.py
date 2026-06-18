@@ -7,6 +7,7 @@ from domain import Book, BookPrice
 from ports.browser import BrowserInterface
 from ports.usecase import PriceDetailsFinderBase
 from usecases.price.PriceSourceUsecasesBase import PriceSourceUsecasesBase
+from usecases.UnitTestCapture import UnitTestCapture
 
 
 class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
@@ -108,6 +109,10 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
         url = details.url(isbn=book.isbn, base_url=self.base_url)
 
         await asyncio.gather(close_page_action)
+
+        UnitTestCapture.capture(
+            f"src/usecases/price/tests/dataset/amazon_{book.isbn}.html", html
+        )
         return BookPrice(
             isbn=book.isbn,
             source=self.base_url,

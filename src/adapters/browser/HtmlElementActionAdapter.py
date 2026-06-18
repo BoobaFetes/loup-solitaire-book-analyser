@@ -1,19 +1,13 @@
 from typing import Literal
 
 from adapters.browser.types import TElement, TPage
-from adapters.os.HtmlFileBackup import HtmlFileBackup
 from adapters.RetryAction import RetryAction
 from ports.browser import HtmlElementActionInterface
 
 
 class HtmlElementActionAdapter(HtmlElementActionInterface[TPage, TElement]):
-    def __init__(self, page: TPage, html_file_backup: HtmlFileBackup | None = None):
+    def __init__(self, page: TPage):
         super().__init__(page)
-        self.__html_file_backup = (
-            html_file_backup
-            if html_file_backup is not None
-            else HtmlFileBackup(self._logger)
-        )
         self._retry_action = RetryAction(self._logger)
 
     async def __page_diagnostic(self, html: str) -> str:
@@ -109,11 +103,6 @@ class HtmlElementActionAdapter(HtmlElementActionInterface[TPage, TElement]):
             self._logger.error(
                 f"Error while waiting for {details}: {e}. Page diagnostic: {diagnostic}",
                 exc_info=True,
-            )
-            await self.__html_file_backup.save(
-                html=html,
-                filename_pattern=lambda counter: f"wait_for_{counter}",
-                log_message=lambda path: f"saving page for {details} in '{path}'",
             )
             return False
 

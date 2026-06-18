@@ -235,11 +235,12 @@ def new_ioc_container(script_name: str) -> IocContainer:
 
     # load environment variables
     container.config.env.from_env("ENV", default="dev")
-    if container.config.env() == "dev":
-        # charge les variables du fichier .env si l'environnement est dev car pour tout autre environnement ces variables sont fourni via l'environnement d'exécution (ex: docker, kubernetes, etc...)
+    if container.config.env() in "dev":
+        # utile hors IDE (vscode charge automatiquement le .env)
         from dotenv import load_dotenv
 
         load_dotenv()
+        container.config.env.from_env("ENV", default="dev")
 
     # bind configuration values
     container.config.root_dir.from_env("ROOT_DIR", default=os.getcwd())
@@ -325,7 +326,7 @@ def new_ioc_container(script_name: str) -> IocContainer:
 
 def print_environment_variables(container: IocContainer, logger: Logger):
     variables = [
-        ("ENV", os.getenv("ENV", "dev")),
+        ("ENV", container.config.env()),
         ("ROOT_DIR", container.config.root_dir()),
         ("API_TIMEOUT", container.config.api_timeout()),
         ("API_PARALLEL_CALLS", container.config.api_parallel_calls()),
