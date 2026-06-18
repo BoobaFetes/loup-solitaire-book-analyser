@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 
 from ioc import new_ioc_container, print_environment_variables
+from usecases.UnitTestCapture import UnitTestCapture
 
 
 # action
@@ -14,6 +15,7 @@ async def main():
     logger.info("IOC container initialized")
 
     print_environment_variables(container, logger)
+    UnitTestCapture.setup(container.config.env() == "test", container.file_system())
 
     # arrange
     book_list = container.book_list_usecases()

@@ -5,6 +5,7 @@ from collections.abc import Callable
 from domain import Book
 from ports.http import HttpClientBase
 from ports.usecase import BookDetailsFinderBase, BookListFinderBase
+from usecases.UnitTestCapture import UnitTestCapture
 
 
 class NonOfficialBookUseCases:
@@ -18,11 +19,11 @@ class NonOfficialBookUseCases:
         details_factory: Callable[[str], BookDetailsFinderBase],
         parallel_calls: int = 5,
     ):
-        self.__url_base = base_url
+        self.__logger = logging.getLogger(self.__class__.__name__)
+        self.__base_url = base_url
         self.__client = client
         self.__list_factory = list_factory
         self.__details_factory = details_factory
-        self.__logger = logging.getLogger(self.__class__.__name__)
         self.__parallel_calls = parallel_calls
 
     async def fetch_books(self, client: HttpClientBase | None = None) -> list[Book]:
@@ -30,7 +31,7 @@ class NonOfficialBookUseCases:
 
         active_client = client or self.__client
         async with active_client as client_instance:
-            self.__logger.info(f"Finding urls of books from {self.__url_base}")
+            self.__logger.info(f"Finding urls of books from {self.__base_url}")
             urls = await self._fetch_book_urls(client_instance)
 
             self.__logger.info(f"Fetching book details for {len(urls)} URLs")
@@ -46,7 +47,7 @@ class NonOfficialBookUseCases:
 
     async def _fetch_book_urls(self, client: HttpClientBase):
         # arrange
-        index_page_url = self.__url_base + r"menu/4_serie/loup_solitaire.htm"
+        index_page_url = self.__base_url + r"menu/4_serie/loup_solitaire.htm"
 
         # fetch page content
         html = await client.get_text(index_page_url, "latin-1")
@@ -56,7 +57,7 @@ class NonOfficialBookUseCases:
             )
             return []
 
-        return self.__list_factory(html).urls(self.__url_base)
+        return self.__list_factory(html).urls(self.__base_url)
 
     # endregion
 
@@ -88,7 +89,7 @@ class NonOfficialBookUseCases:
                     f"Could not find a valid book's number at {url}. Defaulting to {numero}.",
                 )
 
-            image = await details.image(active_client, base_url=self.__url_base)
+            image = await details.image(active_client, base_url=self.__base_url)
             if not image:
                 self.__logger.warning(
                     f"No image content fetched for book URL: {url}",
@@ -106,6 +107,10 @@ class NonOfficialBookUseCases:
                 image=image,
                 prices=[],
                 official=False,
+            )
+            UnitTestCapture.capture(
+                f"src/usecases/book/tests/dataset/biblio_aventurier_{book.isbn}.html",
+                html,
             )
         except Exception as e:
             self.__logger.error(

@@ -10,6 +10,7 @@ from ports.usecase import (
     BookListFinderBase,
     PriceDetailsFinderBase,
 )
+from usecases.UnitTestCapture import UnitTestCapture
 
 
 class OfficialBookUseCases:
@@ -24,12 +25,12 @@ class OfficialBookUseCases:
         price_details_factory: Callable[[str], PriceDetailsFinderBase],
         parallel_calls: int = 5,
     ):
+        self.__logger = logging.getLogger(self.__class__.__name__)
         self.__client = client
         self.__base_url = base_url
         self.__list_factory = list_factory
         self.__details_factory = details_factory
         self.__price_details_factory = price_details_factory
-        self.__logger = logging.getLogger(self.__class__.__name__)
         self.__parallel_calls = parallel_calls
 
     async def fetch_books(self, client: HttpClientBase | None = None) -> list[Book]:
@@ -143,6 +144,10 @@ class OfficialBookUseCases:
                 image=await details.image(active_client),
                 prices=prices,
                 official=True,
+            )
+            UnitTestCapture.capture(
+                f"src/usecases/book/tests/dataset/gallimard_{book.isbn}.html",
+                html,
             )
         except Exception as e:
             self.__logger.error(
