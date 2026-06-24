@@ -1,6 +1,5 @@
 import asyncio
 from collections.abc import Callable
-from typing import cast
 
 from domain import Book, BookPrice
 from ports.http import HttpClientBase
@@ -39,12 +38,7 @@ class GallimardPriceSourceUsecases(PriceSourceUsecasesBase):
         return results
 
     async def fetch_bookprice(self, book: Book, **kwargs) -> BookPrice | None:
-        # check parameters
-        client = cast(HttpClientBase | None, kwargs.get("client", None))
-        if client and not isinstance(client, HttpClientBase):
-            raise ValueError("client must be an instance of HttpClientBase or None")
-
-        # action
+        client: HttpClientBase | None = kwargs.get("client", None)
         try:
             active_client = client or self.__client
             html = await active_client.get_text(book.url)

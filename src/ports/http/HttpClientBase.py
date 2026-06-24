@@ -1,10 +1,9 @@
-from typing import Generic, TypeVar
+from typing import Generic, Protocol, TypeVar
 
-TResponse = TypeVar("TResponse")
-TData = TypeVar("TData")
+TJsonResponse = TypeVar("TJsonResponse")
 
 
-class HttpClientBase(Generic[TResponse, TData]):
+class HttpClientBase(Generic[TJsonResponse], Protocol):
     # region HTTP client lifecycle methods
 
     async def open(self, **kwargs) -> None:
@@ -29,7 +28,7 @@ class HttpClientBase(Generic[TResponse, TData]):
 
     # region HTTP GET methods
 
-    async def get_json(self, endpoint: str, retry: int = 3) -> dict[str, TResponse]:
+    async def get_json(self, endpoint: str, retry: int = 3) -> dict[str, TJsonResponse]:
         raise NotImplementedError("get_json method not implemented")
 
     async def get_text(
