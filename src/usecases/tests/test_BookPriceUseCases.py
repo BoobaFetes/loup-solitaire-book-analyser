@@ -2,9 +2,9 @@ import asyncio
 from datetime import date
 
 from domain import Book, BookPrice
-from ports.database import IBookPriceRepository, IBookRepository, IUnitOfWork
+from adapters.database.tests.fake import FakeBookPriceRepository, FakeUnitOfWork
 from usecases.BookPriceUseCases import BookPriceUseCases
-from usecases.price.PriceSourceUsecasesBase import PriceSourceUsecasesBase
+from usecases.price.tests.fake import FakePriceSourceUsecases
 
 
 def make_book(isbn: str, titre: str = "Livre") -> Book:
@@ -34,110 +34,6 @@ def make_price(
         currency=currency,
         url=f"{source}/{isbn}",
     )
-
-
-class FakePriceSourceUsecases(PriceSourceUsecasesBase):
-    def __init__(self, base_url: str, prices: list[BookPrice]) -> None:
-        super().__init__(base_url)
-        self.prices = prices
-        self.requested_books: list[Book] = []
-
-    async def fetch_bookprices(self, books: list[Book]) -> list[BookPrice]:
-        self.requested_books = list(books)
-        return list(self.prices)
-
-    async def fetch_bookprice(self, book: Book, **kwargs) -> BookPrice | None:
-        return next((price for price in self.prices if price.isbn == book.isbn), None)
-
-
-class FakeBookRepository(IBookRepository):
-    async def list(self, filters={}) -> list[Book]:
-        return []
-
-    async def get(self, id: int) -> Book | None:
-        return None
-
-    async def upsert_many(self, entities: list[Book]) -> list[Book]:
-        return entities
-
-    async def upsert(self, entity: Book) -> Book | None:
-        return entity
-
-    async def add_many(self, entities: list[Book]) -> list[Book]:
-        return entities
-
-    async def add(self, entity: Book) -> Book | None:
-        return entity
-
-    async def update_many(self, entities: list[Book]) -> list[Book]:
-        return entities
-
-    async def update(self, entity: Book) -> Book | None:
-        return entity
-
-
-class FakeBookPriceRepository(IBookPriceRepository):
-    def __init__(self, last_prices=None, prices_by_isbn=None) -> None:
-        self.last_prices = last_prices or {}
-        self.prices_by_isbn = prices_by_isbn or {}
-        self.upserted_items: list[BookPrice] = []
-
-    async def list(self, filters={}) -> list[BookPrice]:
-        return []
-
-    async def get(self, id: tuple[str, str]) -> BookPrice | None:
-        return None
-
-    async def upsert_many(self, entities: list[BookPrice]) -> list[BookPrice]:
-        self.upserted_items = list(entities)
-        return list(entities)
-
-    async def upsert(self, entity: BookPrice) -> BookPrice | None:
-        return entity
-
-    async def add_many(self, entities: list[BookPrice]) -> list[BookPrice]:
-        return entities
-
-    async def add(self, entity: BookPrice) -> BookPrice | None:
-        return entity
-
-    async def update_many(self, entities: list[BookPrice]) -> list[BookPrice]:
-        return entities
-
-    async def update(self, entity: BookPrice) -> BookPrice | None:
-        return entity
-
-    async def dict_last_price_of_source_by_isbns(
-        self, sources: list[str], isbns: list[str] = []
-    ) -> dict[str, dict[str, BookPrice | None]]:
-        return self.last_prices
-
-    async def dict_by_isbns(
-        self, isbns: list[str] = []
-    ) -> dict[str, list[BookPrice]]:
-        return self.prices_by_isbn
-
-
-class FakeUnitOfWork(IUnitOfWork):
-    def __init__(self, prices: FakeBookPriceRepository) -> None:
-        self.books = FakeBookRepository()
-        self.prices = prices
-        self.context = None
-
-    async def __aenter__(self) -> IUnitOfWork:
-        return self
-
-    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
-        pass
-
-    async def begin_transaction(self, transaction_name: str) -> None:
-        pass
-
-    async def commit_transaction(self) -> None:
-        pass
-
-    async def rollback_transaction(self) -> None:
-        pass
 
 
 def test_fetch_prices_stores_only_new_changed_and_valid_prices():

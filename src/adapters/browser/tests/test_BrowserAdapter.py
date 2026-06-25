@@ -2,46 +2,9 @@ import asyncio
 from typing import cast
 
 from playwright.async_api import Browser
-from typing_extensions import Literal
 
 from adapters.browser.BrowserAdapter import BrowserAdapter
-from adapters.browser.types import TBrowser, TElement, TPage
-from ports.browser import PageHandlerInterface
-
-
-class FakePageHandler(PageHandlerInterface[TBrowser, TPage, TElement]):
-    def __init__(self, page: TPage):
-        self._page = page
-        self.visited_urls: list[str] = []
-
-    async def goto(
-        self,
-        url: str,
-        *,
-        wait_until: Literal["commit", "load", "domcontentloaded"] = "domcontentloaded",
-        timeout: int = 10000,
-    ) -> None:
-        self.visited_urls.append(url)
-
-
-class FakeContext:
-    def __init__(self):
-        self.pages: list[str] = []
-
-    async def new_page(self):
-        page = f"page-{len(self.pages)}"
-        self.pages.append(page)
-        return page
-
-
-class FakeBrowser:
-    def __init__(self):
-        self.contexts = [FakeContext()]
-        self.new_context_options: list[dict[str, object]] = []
-
-    async def new_context(self, **kwargs):
-        self.new_context_options.append(kwargs)
-        self.contexts.append(FakeContext())
+from adapters.browser.tests.fake import FakeBrowser, FakePageHandler
 
 
 def test_new_context_uses_configured_browser_context_options():
@@ -61,11 +24,12 @@ def test_new_context_uses_configured_browser_context_options():
 
 def test_new_page_creates_handler_navigates_and_tracks_page():
     browser = BrowserAdapter(page_factory=FakePageHandler)
-    browser.browser = cast(Browser, FakeBrowser())
+    fake_browser = FakeBrowser()
+    browser.browser = cast(Browser, fake_browser)
 
     page_handler = asyncio.run(browser.new_page("https://example.test/livre"))
 
     assert isinstance(page_handler, FakePageHandler)
-    assert page_handler._page == "page-0"
+    assert page_handler._page is fake_browser.contexts[0].pages[0]
     assert page_handler.visited_urls == ["https://example.test/livre"]
     assert browser.pages == [page_handler]

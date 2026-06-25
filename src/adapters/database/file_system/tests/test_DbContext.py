@@ -3,17 +3,7 @@ from typing import cast
 
 from adapters.database.file_system.Database import Database
 from adapters.database.file_system.DbContext import DbContext
-
-
-class FakeDatabase:
-    def __init__(self):
-        self.calls: list[str] = []
-
-    async def start(self):
-        self.calls.append("start")
-
-    async def stop(self):
-        self.calls.append("stop")
+from adapters.database.file_system.tests.fake import FakeDatabase
 
 
 def test_start_stop_and_context_manager_delegate_to_database():

@@ -7,11 +7,10 @@ import httpx
 from adapters.http.HttpxLogHandler import HttpxLogHandler
 from ports.http import HttpClientBase
 
-TResponse = TypeVar("TResponse")
-TData = TypeVar("TData")
+TJsonResponse = TypeVar("TJsonResponse")
 
 
-class HttpClientAdapter(HttpClientBase[TResponse, TData]):
+class HttpClientAdapter(HttpClientBase[TJsonResponse]):
     def __init__(self, retry_delay: float = 1.0, **kwargs):
         self.__retry_delay = retry_delay
         self.client_options = kwargs
@@ -120,7 +119,7 @@ class HttpClientAdapter(HttpClientBase[TResponse, TData]):
         await asyncio.sleep(self.__retry_delay)
         return await self.__get(endpoint, retry)
 
-    async def get_json(self, endpoint: str, retry: int = 3) -> dict[str, TResponse]:
+    async def get_json(self, endpoint: str, retry: int = 3) -> dict[str, TJsonResponse]:
         result = await self.__get(endpoint, retry)
         return result.json()
 

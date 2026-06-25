@@ -8,7 +8,7 @@ from adapters.usecase.gallimard.GallimardBookListFinder import GallimardBookList
 from adapters.usecase.gallimard.GallimardPriceDetailsFinder import (
     GallimardPriceDetailsFinder,
 )
-from ports.http import HttpClientBase
+from adapters.http.tests.fake import FakeHttpClient
 from usecases.book.OfficialBookUseCases import OfficialBookUseCases
 
 DATASET = Path(__file__).parent / "dataset"
@@ -17,28 +17,6 @@ BASE_URL = "https://www.gallimard-jeunesse.fr"
 
 def read_dataset(name: str) -> str:
     return (DATASET / name).read_text(encoding="utf-8")
-
-
-class FakeHttpClient(HttpClientBase[object, object]):
-    def __init__(self, texts: dict[str, str] | None = None) -> None:
-        self.texts = texts or {}
-        self.content_requests: list[str] = []
-        self.opened = False
-
-    async def open(self, **kwargs) -> None:
-        self.opened = True
-
-    async def close(self) -> None:
-        self.opened = False
-
-    async def get_text(
-        self, endpoint: str, encoding: str | None = None, retry: int = 3
-    ) -> str:
-        return self.texts.get(endpoint, "")
-
-    async def get_content(self, endpoint: str, retry: int = 3) -> bytes:
-        self.content_requests.append(endpoint)
-        return b"fake-image"
 
 
 def test_fetch_book_builds_official_book_from_gallimard_dataset():

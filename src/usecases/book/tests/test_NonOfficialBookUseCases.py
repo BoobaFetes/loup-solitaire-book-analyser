@@ -7,7 +7,7 @@ from adapters.usecase.biblio_aventurier.BiblioAventurierBookDetailsFinder import
 from adapters.usecase.biblio_aventurier.BiblioAventurierBookListFinder import (
     BiblioAventurierBookListFinder,
 )
-from ports.http import HttpClientBase
+from adapters.http.tests.fake import FakeHttpClient
 from usecases.book.NonOfficialBookUseCases import NonOfficialBookUseCases
 
 DATASET = Path(__file__).parent / "dataset"
@@ -16,28 +16,6 @@ BASE_URL = "https://www.bibliotheque-des-aventuriers.com/"
 
 def read_dataset(name: str) -> str:
     return (DATASET / name).read_text(encoding="utf-8", errors="replace")
-
-
-class FakeHttpClient(HttpClientBase[object, object]):
-    def __init__(self, texts: dict[str, str] | None = None) -> None:
-        self.texts = texts or {}
-        self.content_requests: list[str] = []
-        self.opened = False
-
-    async def open(self, **kwargs) -> None:
-        self.opened = True
-
-    async def close(self) -> None:
-        self.opened = False
-
-    async def get_text(
-        self, endpoint: str, encoding: str | None = None, retry: int = 3
-    ) -> str:
-        return self.texts.get(endpoint, "")
-
-    async def get_content(self, endpoint: str, retry: int = 3) -> bytes:
-        self.content_requests.append(endpoint)
-        return b"fake-image"
 
 
 def make_use_cases(client: FakeHttpClient) -> NonOfficialBookUseCases:

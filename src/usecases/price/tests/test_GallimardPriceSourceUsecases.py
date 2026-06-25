@@ -5,7 +5,7 @@ from adapters.usecase.gallimard.GallimardPriceDetailsFinder import (
     GallimardPriceDetailsFinder,
 )
 from domain import Book
-from ports.http import HttpClientBase
+from adapters.http.tests.fake import FakeHttpClient
 from usecases.price.GallimardPriceSourceUsecases import GallimardPriceSourceUsecases
 
 DATASET = Path(__file__).parent / "dataset"
@@ -25,23 +25,6 @@ def make_book(isbn: str, titre: str, url: str) -> Book:
         titre=titre,
         authors=["Joe Dever"],
     )
-
-
-class FakeHttpClient(HttpClientBase[object, object]):
-    def __init__(self, texts: dict[str, str] | None = None) -> None:
-        self.texts = texts or {}
-        self.opened = False
-
-    async def open(self, **kwargs) -> None:
-        self.opened = True
-
-    async def close(self) -> None:
-        self.opened = False
-
-    async def get_text(
-        self, endpoint: str, encoding: str | None = None, retry: int = 3
-    ) -> str:
-        return self.texts.get(endpoint, "")
 
 
 def test_fetch_bookprice_returns_gallimard_price_from_dataset():

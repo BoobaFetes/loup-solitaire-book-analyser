@@ -6,37 +6,10 @@ from domain import Book, BookPrice
 from ports.database import (
     IBookPriceRepository,
     IBookRepository,
-    IDbContext,
     TBookListField,
     TBookPriceListField,
 )
-
-
-class FakeContext(IDbContext):
-    def __init__(self):
-        self.calls: list[tuple[str, str | None]] = []
-
-    async def __aenter__(self) -> IDbContext:
-        await self.start()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.stop()
-
-    async def start(self):
-        self.calls.append(("start", None))
-
-    async def stop(self):
-        self.calls.append(("stop", None))
-
-    async def begin_transaction(self, transaction_name: str):
-        self.calls.append(("begin", transaction_name))
-
-    async def commit_transaction(self):
-        self.calls.append(("commit", None))
-
-    async def rollback_transaction(self):
-        self.calls.append(("rollback", None))
+from adapters.database.tests.fake import FakeDbContext
 
 
 class UnusedBookRepository(IBookRepository):
@@ -107,7 +80,7 @@ class UnusedBookPriceRepository(IBookPriceRepository):
 
 def test_context_manager_starts_and_stops_context():
     async def scenario():
-        context = FakeContext()
+        context = FakeDbContext()
         unit = UnitOfWork(context, UnusedBookRepository(), UnusedBookPriceRepository())
         async with unit as current:
             assert current is unit
@@ -118,7 +91,7 @@ def test_context_manager_starts_and_stops_context():
 
 def test_transaction_methods_delegate_to_context():
     async def scenario():
-        context = FakeContext()
+        context = FakeDbContext()
         unit = UnitOfWork(context, UnusedBookRepository(), UnusedBookPriceRepository())
         await unit.begin_transaction("sync")
         await unit.commit_transaction()
