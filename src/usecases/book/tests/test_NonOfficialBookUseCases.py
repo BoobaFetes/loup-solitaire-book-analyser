@@ -7,7 +7,7 @@ from adapters.usecase.biblio_aventurier.BiblioAventurierBookDetailsFinder import
 from adapters.usecase.biblio_aventurier.BiblioAventurierBookListFinder import (
     BiblioAventurierBookListFinder,
 )
-from ports.http.tests.fake import FakeHttpClient
+from adapters.http.tests.fake import FakeHttpClient
 from usecases.book.NonOfficialBookUseCases import NonOfficialBookUseCases
 
 DATASET = Path(__file__).parent / "dataset"

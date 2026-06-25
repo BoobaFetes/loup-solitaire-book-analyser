@@ -1,8 +1,8 @@
 import asyncio
 
 from domain import Book
-from ports.database.tests.fake import FakeUnitOfWork
-from ports.http.tests.fake import FakeHttpClient
+from adapters.database.tests.fake import FakeUnitOfWork
+from adapters.http.tests.fake import FakeHttpClient
 from usecases.BookListUseCases import BookListUseCases
 from usecases.book.tests.fake import FakeNonOfficialBookUseCases, FakeOfficialBookUseCases
 

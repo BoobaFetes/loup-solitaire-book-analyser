@@ -9,7 +9,7 @@ from ports.database import (
     TBookListField,
     TBookPriceListField,
 )
-from ports.database.tests.fake import FakeRecordingDbContext
+from adapters.database.tests.fake import FakeDbContext
 
 
 class UnusedBookRepository(IBookRepository):
@@ -80,7 +80,7 @@ class UnusedBookPriceRepository(IBookPriceRepository):
 
 def test_context_manager_starts_and_stops_context():
     async def scenario():
-        context = FakeRecordingDbContext()
+        context = FakeDbContext()
         unit = UnitOfWork(context, UnusedBookRepository(), UnusedBookPriceRepository())
         async with unit as current:
             assert current is unit
@@ -91,7 +91,7 @@ def test_context_manager_starts_and_stops_context():
 
 def test_transaction_methods_delegate_to_context():
     async def scenario():
-        context = FakeRecordingDbContext()
+        context = FakeDbContext()
         unit = UnitOfWork(context, UnusedBookRepository(), UnusedBookPriceRepository())
         await unit.begin_transaction("sync")
         await unit.commit_transaction()

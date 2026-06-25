@@ -8,7 +8,7 @@ from adapters.usecase.gallimard.GallimardBookListFinder import GallimardBookList
 from adapters.usecase.gallimard.GallimardPriceDetailsFinder import (
     GallimardPriceDetailsFinder,
 )
-from ports.http.tests.fake import FakeHttpClient
+from adapters.http.tests.fake import FakeHttpClient
 from usecases.book.OfficialBookUseCases import OfficialBookUseCases
 
 DATASET = Path(__file__).parent / "dataset"

@@ -4,8 +4,7 @@ from typing import cast
 from playwright.async_api import Browser
 
 from adapters.browser.BrowserAdapter import BrowserAdapter
-from adapters.browser.tests.fake import FakeBrowser
-from ports.browser.tests.fake import FakePageHandler
+from adapters.browser.tests.fake import FakeBrowser, FakePageHandler
 
 
 def test_new_context_uses_configured_browser_context_options():

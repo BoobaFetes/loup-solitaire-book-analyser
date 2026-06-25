@@ -1,7 +1,7 @@
 from ports.database import IBookPriceRepository, IBookRepository, IDbContext, IUnitOfWork
-from ports.database.tests.fake.FakeBookPriceRepository import FakeBookPriceRepository
-from ports.database.tests.fake.FakeBookRepository import FakeBookRepository
-from ports.database.tests.fake.FakeDbContext import FakeDbContext
+from adapters.database.tests.fake.FakeBookPriceRepository import FakeBookPriceRepository
+from adapters.database.tests.fake.FakeBookRepository import FakeBookRepository
+from adapters.database.tests.fake.FakeDbContext import FakeDbContext
 
 
 class FakeUnitOfWork(IUnitOfWork):

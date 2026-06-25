@@ -1,10 +1,11 @@
-from typing import Literal
+from typing import Literal, cast
 
-from ports.browser import BrowserInterface, HtmlElementActionInterface, PageHandlerInterface
+from adapters.browser.types import TBrowser, TElement, TPage
+from ports.browser import HtmlElementActionInterface, PageHandlerInterface
 
 
-class FakeAmazonHtmlElementAction(HtmlElementActionInterface[object, object]):
-    def __init__(self, page: object, matching_title: str) -> None:
+class FakeHtmlElementAction(HtmlElementActionInterface[object, object]):
+    def __init__(self, page: object, matching_title: str = "") -> None:
         super().__init__(page)
         self.matching_title = matching_title
         self.values: dict[str, bool | str] = {}
@@ -43,14 +44,18 @@ class FakeAmazonHtmlElementAction(HtmlElementActionInterface[object, object]):
         return True
 
 
-class FakeAmazonPageHandler(PageHandlerInterface[object, object, object]):
+class FakePageHandler(PageHandlerInterface[TBrowser, TPage, TElement]):
     def __init__(
         self,
-        html: str,
-        matching_title: str,
+        page: TPage | None = None,
+        *,
+        html: str = "",
+        matching_title: str = "",
         base_url: str = "https://www.amazon.fr",
     ) -> None:
-        self.action = FakeAmazonHtmlElementAction(object(), matching_title)
+        self._page = cast(TPage, page or object())
+        self.action = FakeHtmlElementAction(object(), matching_title)
+        self.visited_urls: list[str] = []
         self._html = html
         self.closed = False
         self._base_url = base_url
@@ -63,9 +68,12 @@ class FakeAmazonPageHandler(PageHandlerInterface[object, object, object]):
         wait_until: Literal["commit", "load", "domcontentloaded"] = "domcontentloaded",
         timeout: int = 10000,
     ) -> None:
+        self.visited_urls.append(url)
         self._current_url = url
 
-    async def wait_for_url_change(self, previous_url: str, timeout: int = 10000) -> bool:
+    async def wait_for_url_change(
+        self, previous_url: str, timeout: int = 10000
+    ) -> bool:
         self._current_url = f"{self._base_url}/s?k=fake"
         return True
 
@@ -80,33 +88,3 @@ class FakeAmazonPageHandler(PageHandlerInterface[object, object, object]):
 
     async def html(self) -> str:
         return self._html
-
-
-class FakeAmazonBrowser(BrowserInterface[object, object, object]):
-    def __init__(self, page: FakeAmazonPageHandler) -> None:
-        super().__init__()
-        self.page = page
-        self.contexts: list[int] = []
-        self.opened = False
-
-    async def __aenter__(self) -> "FakeAmazonBrowser":
-        self.opened = True
-        return self
-
-    async def __aexit__(self, exc_type, exc_value, traceback):
-        self.opened = False
-
-    async def start(self) -> None:
-        self.opened = True
-
-    async def close(self) -> None:
-        self.opened = False
-
-    async def new_context(self) -> int:
-        self.contexts.append(0)
-        return 0
-
-    async def new_page(
-        self, url: str, context_index: int = 0
-    ) -> FakeAmazonPageHandler:
-        return self.page

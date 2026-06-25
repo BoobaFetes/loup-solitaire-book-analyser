@@ -2,7 +2,7 @@ import asyncio
 from datetime import date
 
 from domain import Book, BookPrice
-from ports.database.tests.fake import FakeBookPriceRepository, FakeUnitOfWork
+from adapters.database.tests.fake import FakeBookPriceRepository, FakeUnitOfWork
 from usecases.BookPriceUseCases import BookPriceUseCases
 from usecases.price.tests.fake import FakePriceSourceUsecases
 

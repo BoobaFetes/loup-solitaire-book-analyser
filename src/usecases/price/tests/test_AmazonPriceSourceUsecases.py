@@ -2,8 +2,8 @@ import asyncio
 from pathlib import Path
 
 from adapters.usecase.amazon.AmazonPriceDetailsFinder import AmazonPriceDetailsFinder
+from adapters.browser.tests.fake import FakeBrowser, FakePageHandler
 from domain import Book
-from ports.browser.tests.fake import FakeAmazonBrowser, FakeAmazonPageHandler
 from usecases.price.AmazonPriceSourceUsecases import AmazonPriceSourceUsecases
 
 DATASET = Path(__file__).parent / "dataset"
@@ -27,19 +27,19 @@ def make_book(isbn: str, titre: str, numero: int) -> Book:
 
 def test_fetch_bookprice_returns_amazon_price_from_dataset():
     book = make_book("9782075168694", "Les Maîtres des Ténèbres", 1)
-    page = FakeAmazonPageHandler(
-        read_dataset("amazon_9782075168694.html"),
+    page = FakePageHandler(
+        html=read_dataset("amazon_9782075168694.html"),
         matching_title="Les Maîtres des Ténèbres",
     )
     use_cases = AmazonPriceSourceUsecases(
         BASE_URL,
         AmazonPriceDetailsFinder,
-        FakeAmazonBrowser(page),
+        FakeBrowser(page),
         request_delay_seconds=0,
     )
 
     price = asyncio.run(
-        use_cases.fetch_bookprice(book, browser=FakeAmazonBrowser(page), context_index=0)
+        use_cases.fetch_bookprice(book, browser=FakeBrowser(page), context_index=0)
     )
 
     assert price is not None
@@ -52,19 +52,19 @@ def test_fetch_bookprice_returns_amazon_price_from_dataset():
 
 def test_fetch_bookprice_matches_agarash_title_with_apostrophe_variant():
     book = make_book("9782075123211", "L'œil d'Agarash", 0)
-    page = FakeAmazonPageHandler(
-        read_dataset("amazon_9782075123211.html"),
+    page = FakePageHandler(
+        html=read_dataset("amazon_9782075123211.html"),
         matching_title="L'Œil d'Agarash",
     )
     use_cases = AmazonPriceSourceUsecases(
         BASE_URL,
         AmazonPriceDetailsFinder,
-        FakeAmazonBrowser(page),
+        FakeBrowser(page),
         request_delay_seconds=0,
     )
 
     price = asyncio.run(
-        use_cases.fetch_bookprice(book, browser=FakeAmazonBrowser(page), context_index=0)
+        use_cases.fetch_bookprice(book, browser=FakeBrowser(page), context_index=0)
     )
 
     assert price is not None
@@ -75,19 +75,19 @@ def test_fetch_bookprice_matches_agarash_title_with_apostrophe_variant():
 
 def test_fetch_bookprice_returns_not_set_price_for_gallimard_missing_book_without_visible_amazon_price():
     book = make_book("2070519031", "Sur la Piste du Loup", 25)
-    page = FakeAmazonPageHandler(
-        read_dataset("amazon_2070519031.html"),
+    page = FakePageHandler(
+        html=read_dataset("amazon_2070519031.html"),
         matching_title="Sur la Piste du Loup",
     )
     use_cases = AmazonPriceSourceUsecases(
         BASE_URL,
         AmazonPriceDetailsFinder,
-        FakeAmazonBrowser(page),
+        FakeBrowser(page),
         request_delay_seconds=0,
     )
 
     price = asyncio.run(
-        use_cases.fetch_bookprice(book, browser=FakeAmazonBrowser(page), context_index=0)
+        use_cases.fetch_bookprice(book, browser=FakeBrowser(page), context_index=0)
     )
 
     assert price is not None
@@ -100,19 +100,19 @@ def test_fetch_bookprice_returns_not_set_price_for_gallimard_missing_book_withou
 
 def test_fetch_bookprice_returns_none_when_amazon_result_is_not_visible():
     book = make_book("2070519031", "Sur la Piste du Loup", 25)
-    page = FakeAmazonPageHandler(
-        read_dataset("amazon_2070519031.html"),
+    page = FakePageHandler(
+        html=read_dataset("amazon_2070519031.html"),
         matching_title="Un autre livre",
     )
     use_cases = AmazonPriceSourceUsecases(
         BASE_URL,
         AmazonPriceDetailsFinder,
-        FakeAmazonBrowser(page),
+        FakeBrowser(page),
         request_delay_seconds=0,
     )
 
     price = asyncio.run(
-        use_cases.fetch_bookprice(book, browser=FakeAmazonBrowser(page), context_index=0)
+        use_cases.fetch_bookprice(book, browser=FakeBrowser(page), context_index=0)
     )
 
     assert price is None
