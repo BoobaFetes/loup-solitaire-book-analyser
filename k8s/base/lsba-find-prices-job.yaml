@@ -1,55 +1,16 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: lsba-find-books-job
-  namespace: lsba-ns # patched by overlay
-spec:
-  backoffLimit: 2 # 2 tentatives max en cas d'echec
-  template:
-    metadata: {}
-    spec:
-      volumes:
-        - name: project-volume
-          persistentVolumeClaim:
-            claimName: lsba-pvc # patched by overlay
-      containers:
-        - image: loup-solitaire-book-analyser:v0.1.3
-          name: lsba-find-books
-          args: ["src/find_books.py"]
-          envFrom:
-            - configMapRef:
-                name: lsba-cm
-                optional: false
-          volumeMounts:
-            - name: project-volume
-              mountPath: /app/data
-              subPath: data
-            - name: project-volume
-              mountPath: /app/logs
-              subPath: logs
-          resources:
-            limits:
-              memory: "128Mi"
-              cpu: "100m"
-            requests:
-              memory: "64Mi"
-              cpu: "50m"
-      restartPolicy: Never # on veut un nouveau pod en cas d'echec pour analyser les erreurs (tous les logs ne vont pas forcément dans les fichers logs du PVC)
----
-apiVersion: batch/v1
-kind: Job
-metadata:
   name: lsba-find-prices-job
-  namespace: lsba-ns # patched by overlay
+  namespace: lsba-ns
 spec:
   backoffLimit: 2 # 2 tentatives max en cas d'echec  
   template:
-    metadata: {}
     spec:
       volumes:
         - name: project-volume
           persistentVolumeClaim:
-            claimName: lsba-pvc # patched by overlay
+            claimName: lsba-pvc
       initContainers:
           # pour les tests, il faut un container d'attente pour conserver la logique : on récupère les livre et ensuite on recherche leurs prix
           # le plus simple est d'utiliser un timer car on connait le temps d'execution de find_books.py

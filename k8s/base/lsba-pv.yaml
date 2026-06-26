@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: lsba-pv
+spec:
+  storageClassName: lsba-sc
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 1Mi
+  hostPath:
+    path: /mnt/volumes/lsba/dev
+  claimRef:
+    name: lsba-pvc
+    namespace: lsba-ns

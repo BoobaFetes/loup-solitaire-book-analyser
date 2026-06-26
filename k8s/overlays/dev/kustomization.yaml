@@ -2,77 +2,17 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 namespace: lsba-ns-dev
+nameSuffix: -dev
 
 resources:
   - ../../base
 
 patches:
-  - target:
-      kind: Namespace
-    patch: |-
-      - op: replace
-        path: /metadata/name
-        value: lsba-ns-dev
-  - target:
-      kind: StorageClass
-      name: lsba-sc
-    patch: |-
-      - op: replace
-        path: /metadata/name
-        value: lsba-sc-dev
-  - target:
-      kind: PersistentVolume
-      name: lsba-pv
-    patch: |-
-      - op: replace
-        path: /metadata/name
-        value: lsba-pv-dev
-      - op: replace
-        path: /spec/storageClassName
-        value: lsba-sc-dev
-      - op: replace
-        path: /spec/claimRef/namespace
-        value: lsba-ns-dev
-      - op: replace
-        path: /spec/claimRef/name
-        value: lsba-pvc-dev
-  - target:
-      kind: PersistentVolumeClaim
-      name: lsba-pvc
-    patch: |-
-      - op: replace
-        path: /metadata/name
-        value: lsba-pvc-dev
-      - op: replace
-        path: /spec/storageClassName
-        value: lsba-sc-dev
-  - target:
-      kind: CronJob
-      name: lsba-find-books-cronjob
-    patch: |-
-      - op: replace
-        path: /spec/jobTemplate/spec/template/spec/volumes/0/persistentVolumeClaim/claimName
-        value: lsba-pvc-dev
-  - target:
-      kind: CronJob
-      name: lsba-find-prices-cronjob
-    patch: |-
-      - op: replace
-        path: /spec/jobTemplate/spec/template/spec/volumes/0/persistentVolumeClaim/claimName
-        value: lsba-pvc-dev
-  - target:
-      kind: Job
-      name: lsba-find-books-job
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/volumes/0/persistentVolumeClaim/claimName
-        value: lsba-pvc-dev
-  - target:
-      kind: Job
-      name: lsba-find-prices-job
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/volumes/0/persistentVolumeClaim/claimName
-        value: lsba-pvc-dev
+  - path: patch-lsba-find-books-cronjob.yaml
+  - path: patch-lsba-find-books-job.yaml
+  - path: patch-lsba-find-prices-cronjob.yaml
+  - path: patch-lsba-find-prices-job.yaml
+  - path: patch-lsba-pv.yaml
+  - path: patch-lsba-pvc.yaml
         
 

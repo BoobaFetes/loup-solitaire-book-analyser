@@ -1,0 +1,12 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: lsba-find-prices-job
+  namespace: lsba-ns
+spec:
+  template:
+    spec:
+      volumes:
+        - name: project-volume
+          persistentVolumeClaim:
+            claimName: lsba-pvc-prod

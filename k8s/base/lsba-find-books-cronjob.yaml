@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: lsba-find-books-cronjob
+  namespace: lsba-ns
+spec:
+  # attention, le temps est en zoulu time en dev (docker-desktop) !
+  schedule: "5 22 * * *" # tous les jours à minuit:05 (UTC+02)
+  jobTemplate:
+    metadata:
+      name: lsba-find-books-job
+    spec:
+      backoffLimit: 2 # 2 tentatives max en cas d'echec
+      template:
+        spec:
+          volumes:
+            - name: project-volume
+              persistentVolumeClaim:
+                claimName: lsba-pvc
+          containers:
+            - image: loup-solitaire-book-analyser:v0.1.3
+              name: lsba-find-books
+              args: ["src/find_books.py"]
+              envFrom:
+                - configMapRef:
+                    name: lsba-cm
+                    optional: false
+              volumeMounts:
+                - name: project-volume
+                  mountPath: /app/data
+                  subPath: data
+                - name: project-volume
+                  mountPath: /app/logs
+                  subPath: logs
+              resources:
+                limits:
+                  memory: "128Mi"
+                  cpu: "100m"
+                requests:
+                  memory: "64Mi"
+                  cpu: "50m"
+          restartPolicy: Never # on veut un nouveau pod en cas d'echec pour analyser les erreurs (tous les logs ne vont pas forcément dans les fichers logs du PVC)
