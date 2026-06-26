@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: lsba-cm
-  namespace: lsba-ns # patched by overlay
+  namespace: lsba-ns
 data:
   # not necessary -> ENV: prod
   # not necessary -> ROOT_DIR: /app

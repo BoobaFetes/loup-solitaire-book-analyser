@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: lsba-pv
+spec:
+  storageClassName: lsba-sc-prod
+  claimRef:
+    namespace: lsba-ns-prod
+    name: lsba-pvc-prod
