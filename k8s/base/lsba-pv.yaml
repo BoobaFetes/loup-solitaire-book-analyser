@@ -5,7 +5,7 @@ metadata:
 spec:
   storageClassName: lsba-sc
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   capacity:
     storage: 1Mi
   hostPath:
