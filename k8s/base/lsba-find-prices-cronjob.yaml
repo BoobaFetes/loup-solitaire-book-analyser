@@ -14,6 +14,11 @@ spec:
       backoffLimit: 2 # 2 tentatives max en cas d'echec
       template:
         spec:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 4001
+            runAsGroup: 4000
+            fsGroup: 4001
           volumes:
             - name: project-volume
               persistentVolumeClaim:
@@ -33,6 +38,11 @@ spec:
                 - name: project-volume
                   mountPath: /app/logs
                   subPath: logs
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
               resources:
                 limits:
                   # playwright semble au max avoir besoin de ~800Mi de mémoire et ~1.6 de cpu

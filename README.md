@@ -190,6 +190,58 @@ Please, follow these steps to deliver the application:
    k -n <namespace> set image job/dev-loup-solitaire-book-analyser-job loup-solitaire-book-analyser=loup-solitaire-book-analyser:vX.Y.Z
    ```
 
+## File system permissions
+
+> we use 4 as prefix for user and group to avoid conflict with other projects (if they exists).
+> We have choose 4 because the alias of the project `lsba` has 4 characters.
+
+### users and groups
+
+The groups are 4x0y: where x is the environment (dev, staging, prod) and y is the type of application (app or data).
+
+so we have:
+
+- 400x for the dev group
+  - 4000 for app like jobs or webapp or apis
+  - 4001 for data like postgresql
+- 410x for the staging group
+  - 4100 for app like jobs or webapp or apis
+  - 4101 for data like postgresql
+- 420x for the prod group
+  - 4200 for app like jobs or webapp or apis
+  - 4201 for data like postgresql
+
+The users are:
+
+- 4001: for batchs (cronjobs and jobs)
+- 4002: for webapp (webapp and api)
+- 4003: for data (postgresql)
+- root (only for local and to check files in physical volumes)
+
+> user are not set in linux nor in kubernetes, because we don't need it
+
+there is only one group for all users, because the group reflect the who can access the project, so every app belongs to this group.
+
+### repositories
+
+on local cluter (desktop ), we have to set the file system permissions to be sure that the applications can read and write in the right directories.
+
+so:
+
+- /mnt/volumes/lsba/    → root seul
+  - dev/               → groupe 4000
+    - logs/           → groupe 4000 (users 4001 + 4002)
+    - data/           → groupe 4000 (users 4001 + 4002)
+    - postgresql/     → groupe 4000 (user 4003)
+
+for now, because we don't know where the application will be deployed
+
+- /mnt/volumes/lsba/    → root seul
+  - prod/              → groupe 4200
+    - logs/           → groupe 4200 (users 4001 + 4002)
+    - data/           → groupe 4200 (users 4001 + 4002)
+    - postgresql/     → groupe 4200 (user 4003)
+
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request for any enhancements or bug fixes.
