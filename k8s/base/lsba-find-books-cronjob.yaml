@@ -19,7 +19,7 @@ spec:
             runAsNonRoot: true
             runAsUser: 4001
             runAsGroup: 4000
-            fsGroup: 4001
+            fsGroup: 4000
           volumes:
             - name: project-volume
               persistentVolumeClaim:
