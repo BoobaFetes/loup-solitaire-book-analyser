@@ -8,6 +8,8 @@ spec:
   jobTemplate:
     metadata:
       name: lsba-find-prices-job
+      labels:
+        role: lsba-batch
     spec:
       backoffLimit: 2 # 2 tentatives max en cas d'echec
       template:

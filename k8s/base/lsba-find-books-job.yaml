@@ -3,6 +3,8 @@ kind: Job
 metadata:
   name: lsba-find-books-job
   namespace: lsba-ns
+  labels:
+    role: lsba-batch
 spec:
   backoffLimit: 2 # 2 tentatives max en cas d'echec
   template:
