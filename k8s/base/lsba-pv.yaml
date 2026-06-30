@@ -5,9 +5,9 @@ metadata:
 spec:
   storageClassName: lsba-sc
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   capacity:
-    storage: 1Mi
+    storage: 10Mi
   hostPath:
     path: /mnt/volumes/lsba/dev
   claimRef:

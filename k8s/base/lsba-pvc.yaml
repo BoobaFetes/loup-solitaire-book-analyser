@@ -6,7 +6,7 @@ metadata:
 spec:
   storageClassName: lsba-sc
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
-      storage: 1Mi
+      storage: 10Mi
