@@ -1,17 +1,22 @@
-# Ce script permet l'initialisation des volumes dans un cluster local (ex: k3s) en créant les dossiers nécessaires à l'intérieur du volume monté.
-# il n'a pas pour but d'être utilisé tel quel dans un environnement de production, mais plutôt de faciliter le développement local.
-# POUR RAPPEL : dans un environnement de production, les volumes sont généralement gérés par des solutions de stockage dédiées (ex: NFS, Ceph, etc.) et ne nécessitent pas ce genre d'initialisation manuelle.
+# This script cleans up the local configuration in a local cluster (e.g., k3s) by removing the directories and groups created for development purposes.
+# It is not intended to be used as-is in a production environment, but rather to facilitate local development.
+# REMINDER: In a production environment, volumes and groups are typically managed by dedicated storage solutions (e.g., NFS, Ceph, etc.) and do not require this kind of manual cleanup.
 
-# TODO : mettre en place des volumes dans le cloud (AWS ou Azure)
+# TODO: clean up volumes in the cloud (AWS or Azure)
 
-$NODE = "desktop-worker" # à changer en fonction du nom des nœuds de votre cluster local
+$NODE = "desktop-worker" # change according to the name of the nodes in your local cluster
 
-Write-Host "Connexion au noeud $NODE..." -ForegroundColor Cyan
+Write-Host "Connecting to node $NODE..." -ForegroundColor Cyan
 
-# Commandes à exécuter dans le nœud
-$commands = @(
-    'rm -rf /mnt/volumes/lsba'
-)
+# arrange
+$commands = @()
+
+# delete directories and subdirectories
+
+$commands += 'rm -rf /mnt/volumes/lsba'
+
+# delete groups
+
 $groups = @(
     @{ gid = 4000; name = "lsba-dev-app" },
     @{ gid = 4001; name = "lsba-dev-data" },
@@ -27,9 +32,11 @@ foreach ($group in $groups) {
 $commands += $groupscmd
 $commands += "getent group | grep lsba"
 
+# executes commands in the worker node
+
 foreach ($cmd in $commands) {
-    Write-Host "`n> Exécution : $cmd" -ForegroundColor Yellow
+    Write-Host "`n> Executing: $cmd" -ForegroundColor Yellow
     docker exec -it $NODE bash -c $cmd
 }
 
-Write-Host "`nTerminé !" -ForegroundColor Green
+Write-Host "Finished !" -ForegroundColor Green
