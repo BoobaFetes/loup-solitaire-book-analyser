@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: lsba-find-books-job
+  namespace: lsba-ns
+spec:
+  template:
+    spec:
+      serviceAccountName: lsba-sa-noright-stg
+      securityContext:
+          fsGroup: 4100
+          runAsGroup: 4100
+          runAsUser: 4101
+      volumes:
+        - name: project-volume
+          persistentVolumeClaim:
+            claimName: lsba-pvc-stg
