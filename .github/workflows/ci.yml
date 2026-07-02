@@ -1,3 +1,33 @@
+# -----------------------------------------------------------------------------
+# CI (Continuous Integration)
+#
+# Objectif :
+#   Valider qu'une modification du code est intégrable sans régression.
+#
+# Ce workflow est exécuté :
+#   - à chaque Pull Request : validation avant fusion
+#   - à chaque push sur la branche principale : validation de la branche
+#
+# Les validations sont volontairement séparées en deux jobs :
+#
+# 1. validate-python
+#    - vérifie la qualité du code (analyse statique, lint)
+#    - exécute les tests unitaires
+#
+# 2. validate-docker
+#    - vérifie que le Dockerfile permet toujours de construire une image
+#    - ne publie aucun artefact (push: false)
+#    - utilise BuildKit (Buildx) afin de bénéficier du cache GitHub Actions
+#      (cache-from/cache-to), ce qui réduit fortement le temps des builds
+#      successifs.
+#
+# Le build Docker fait partie de la CI car il valide la capacité à produire
+# une image exécutable, sans pour autant constituer une livraison.
+#
+# La publication de l'image (registry) et son déploiement Kubernetes relèvent
+# du pipeline de CD (Continuous Delivery).
+# -----------------------------------------------------------------------------
+  
 name: CI
 
 on:
@@ -34,3 +64,24 @@ jobs:
 
       - name: Test
         run: pytest
+    
+  validate-docker:
+    needs: validate-python
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        
+      - name: Set up Docker Buildx
+        # Buildx crée un builder BuildKit utilisant le driver "docker-container".
+        # Ce driver est nécessaire pour bénéficier du cache GitHub Actions
+        # (cache-from/cache-to) et des fonctionnalités avancées de BuildKit.
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

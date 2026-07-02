@@ -6,6 +6,7 @@ metadata:
 spec:
   template:
     spec:
+      serviceAccountName: lsba-sa-no-access-dev
       volumes:
         - name: project-volume
           persistentVolumeClaim:

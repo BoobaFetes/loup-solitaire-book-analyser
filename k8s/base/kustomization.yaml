@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - lsba-cm.yaml
+  - lsba-sa-no-access.yaml
   - lsba-find-books-cronjob.yaml
   - lsba-find-books-job.yaml
   - lsba-find-prices-cronjob.yaml

@@ -8,12 +8,12 @@ spec:
     spec:
       template:
         spec:
-          serviceAccountName: lsba-sa-no-access-prod
+          serviceAccountName: lsba-sa-no-access-stg
           securityContext:
-              fsGroup: 4200
-              runAsGroup: 4200
-              runAsUser: 4201
+              fsGroup: 4100
+              runAsGroup: 4100
+              runAsUser: 4101
           volumes:
             - name: project-volume
               persistentVolumeClaim:
-                claimName: lsba-pvc-prod
+                claimName: lsba-pvc-stg
