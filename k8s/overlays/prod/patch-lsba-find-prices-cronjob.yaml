@@ -8,6 +8,11 @@ spec:
     spec:
       template:
         spec:
+          serviceAccountName: lsba-sa-noright-prod
+          securityContext:
+              fsGroup: 4200
+              runAsGroup: 4200
+              runAsUser: 4201
           volumes:
             - name: project-volume
               persistentVolumeClaim:
