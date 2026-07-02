@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir -r ./requirements.txt
 RUN playwright install chromium --with-deps \
     && chmod -R a+rX "$PLAYWRIGHT_BROWSERS_PATH"
 
-COPY ./error ./src
+COPY ./src ./src
 
 ENV ENV="prod"
 ENV LOG_LEVEL="INFO"
