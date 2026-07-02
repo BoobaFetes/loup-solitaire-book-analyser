@@ -4,14 +4,26 @@ This document describes the Kubernetes security model used by the LSBA manifests
 
 ## Scope
 
-The current security model applies to the batch workloads:
+The current security model applies to the batch workloads.
 
-- `lsba-find-books-job`
+Common workloads deployed by all overlays:
+
 - `lsba-find-books-cronjob`
-- `lsba-find-prices-job`
 - `lsba-find-prices-cronjob`
 
-Storage implementation details such as `hostPath`, local `PersistentVolume`, and local `StorageClass` are intentionally not covered here. They are environment-specific and should be handled by overlays.
+Local `dev`-only one-shot workloads:
+
+- `lsba-find-books-job`
+- `lsba-find-prices-job`
+
+Storage implementation details are environment-specific and should be handled by overlays.
+
+For local hosting, `k8s/overlays/dev` deliberately contains:
+
+- a local `PersistentVolume` backed by `hostPath` at `/mnt/lsba/dev`;
+- a `StorageClass` patch that uses `kubernetes.io/no-provisioner`.
+
+`stg` and `prod` must use a cloud storage provider and CSI driver once the target platform is selected.
 
 ## Pod Security Standards
 

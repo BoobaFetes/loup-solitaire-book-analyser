@@ -1,15 +1,15 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: lsba-find-prices-job
+  name: lsba-find-books-job
   namespace: lsba-ns
   labels:
     role: lsba-batch
 spec:
-  backoffLimit: 2 # 2 tentatives max en cas d'echec  
+  backoffLimit: 2 # 2 tentatives max en cas d'echec
   template:
     spec:
-      serviceAccountName: lsba-sa-no-access
+      serviceAccountName: lsba-sa-no-access-dev
       securityContext:
         runAsNonRoot: true
         runAsUser: 4001
@@ -20,28 +20,14 @@ spec:
       volumes:
         - name: project-volume
           persistentVolumeClaim:
-            claimName: lsba-pvc
-      initContainers:
-          # pour les tests, il faut un container d'attente pour conserver la logique : on récupère les livre et ensuite on recherche leurs prix
-          # le plus simple est d'utiliser un timer car on connait le temps d'execution de find_books.py
-        - image: alpine
-          name: wait-for-find-books-ends
-          command: 
-          - "sh"
-          - "-c"
-          - "sleep 70"
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+            claimName: lsba-pvc-dev
       containers:
         - image: loup-solitaire-book-analyser:v0.1.3
-          name: lsba-find-prices
-          args: ["src/find_prices.py"]
+          name: lsba-find-books
+          args: ["src/find_books.py"]
           envFrom:
             - configMapRef:
-                name: lsba-cm
+                name: lsba-cm-dev
                 optional: false
           volumeMounts:
             - name: project-volume
@@ -57,11 +43,9 @@ spec:
                 - ALL
           resources:
             limits:
-              # playwright semble au max avoir besoin de ~800Mi de mémoire et ~1.6 de cpu
-              memory: "1Gi"
-              cpu: "2"
+              memory: "256Mi"
+              cpu: "100m"
             requests:
-              # playwright necessite au moins 500Mi de mémoire et ~0.5 cpu au min
-              memory: "500Mi"
-              cpu: "0.5"
+              memory: "64Mi"
+              cpu: "50m"
       restartPolicy: Never # on veut un nouveau pod en cas d'echec pour analyser les erreurs (tous les logs ne vont pas forcément dans les fichers logs du PVC)

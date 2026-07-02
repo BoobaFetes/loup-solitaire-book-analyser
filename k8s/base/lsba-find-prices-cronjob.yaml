@@ -52,7 +52,7 @@ spec:
                   memory: "1Gi"
                   cpu: "2"
                 requests:
-                  # playwright necessite au moins 500Mi de mémoire et ~0.5 cpu au min
-                  memory: "500Mi"
-                  cpu: "0.5"
+                  # playwright necessite au moins 400Mi de mémoire et ~0.8 cpu au min
+                  memory: "400Mi"
+                  cpu: "0.8"
           restartPolicy: Never # on veut un nouveau pod en cas d'echec pour analyser les erreurs (tous les logs ne vont pas forcément dans les fichers logs du PVC)

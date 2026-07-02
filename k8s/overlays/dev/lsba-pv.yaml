@@ -3,13 +3,13 @@ kind: PersistentVolume
 metadata:
   name: lsba-pv
 spec:
-  storageClassName: lsba-sc
+  storageClassName: lsba-sc-dev
   accessModes:
     - ReadWriteMany
   capacity:
     storage: 10Mi
   hostPath:
-    path: /mnt/volumes/lsba/dev
+    path: /mnt/lsba/dev
   claimRef:
-    name: lsba-pvc
-    namespace: lsba-ns
+    name: lsba-pvc-dev
+    namespace: lsba-ns-dev

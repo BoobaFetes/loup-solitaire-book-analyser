@@ -4,26 +4,24 @@
 
 # TODO: clean up volumes in the cloud (AWS or Azure)
 
-$NODE = "desktop-worker" # change according to the name of the nodes in your local cluster
-
-Write-Host "Connecting to node $NODE..." -ForegroundColor Cyan
+$NODES = @("desktop-worker", "desktop-worker2") # change according to the name of the nodes in your local cluster
 
 # arrange
 $commands = @()
 
 # delete directories and subdirectories
 
-$commands += 'rm -rf /mnt/volumes/lsba'
+$commands += 'rm -rf /mnt/lsba'
 
 # delete groups
 
 $groups = @(
     @{ gid = 4000; name = "lsba-dev-app" },
-    @{ gid = 4001; name = "lsba-dev-data" },
-    @{ gid = 4100; name = "lsba-stg-app" },
-    @{ gid = 4101; name = "lsba-stg-data" },
-    @{ gid = 4200; name = "lsba-prod-app" },
-    @{ gid = 4201; name = "lsba-prod-data" }
+    @{ gid = 4001; name = "lsba-dev-data" }
+    # not used in dev environment @{ gid = 4100; name = "lsba-stg-app" },
+    # not used in dev environment @{ gid = 4101; name = "lsba-stg-data" },
+    # not used in dev environment @{ gid = 4200; name = "lsba-prod-app" },
+    # not used in dev environment @{ gid = 4201; name = "lsba-prod-data" }
 )
 $groupscmd = ""
 foreach ($group in $groups) {
@@ -34,9 +32,12 @@ $commands += "getent group | grep lsba"
 
 # executes commands in the worker node
 
-foreach ($cmd in $commands) {
-    Write-Host "`n> Executing: $cmd" -ForegroundColor Yellow
-    docker exec -it $NODE bash -c $cmd
+foreach ($node in $NODES) {
+    Write-Host "`nConnecting to node $node..." -ForegroundColor Cyan
+    foreach ($cmd in $commands) {
+        Write-Host "> Executing: $cmd" -ForegroundColor Yellow
+        docker exec -it $node bash -c $cmd  
+    }
 }
 
 Write-Host "Finished !" -ForegroundColor Green

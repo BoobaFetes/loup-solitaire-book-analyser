@@ -2,25 +2,24 @@
 # It is not intended to be used as-is in a production environment, but rather to facilitate local development.
 # REMINDER: In a production environment, volumes are typically managed by dedicated storage solutions (e.g., NFS, Ceph, etc.) and do not require this kind of manual initialization.
 
-$NODE = "desktop-worker" # change according to the name of the nodes in your local cluster
+$NODES = @("desktop-worker", "desktop-worker2") # change according to the name of the nodes in your local cluster
 
-Write-Host "Connecting to node $NODE..." -ForegroundColor Cyan
 
 # arrange
 $commands = @()
 
 # create directories and subdirectories
-$dir = "/mnt/volumes/lsba"
+$dir = "/mnt/lsba"
 $subDirs = (    
     "$dir/dev/data", 
     "$dir/dev/logs", 
-    "$dir/dev/postgresql", 
-    "$dir/stg/data", 
-    "$dir/stg/logs", 
-    "$dir/stg/postgresql",
-    "$dir/prod/data", 
-    "$dir/prod/logs", 
-    "$dir/prod/postgresql"
+    "$dir/dev/postgresql" 
+    # not used in dev environment "$dir/stg/data", 
+    # not used in dev environment "$dir/stg/logs", 
+    # not used in dev environment "$dir/stg/postgresql",
+    # not used in dev environment "$dir/prod/data", 
+    # not used in dev environment "$dir/prod/logs", 
+    # not used in dev environment "$dir/prod/postgresql"
 )
 
 $commands += "mkdir -p $dir"
@@ -31,11 +30,11 @@ $commands += "mkdir -p $($subDirs -join ' ')"
 
 $groups = @(
     @{ gid = 4000; name = "lsba-dev-app" },
-    @{ gid = 4001; name = "lsba-dev-data" },
-    @{ gid = 4100; name = "lsba-stg-app" },
-    @{ gid = 4101; name = "lsba-stg-data" },
-    @{ gid = 4200; name = "lsba-prod-app" },
-    @{ gid = 4201; name = "lsba-prod-data" }
+    @{ gid = 4001; name = "lsba-dev-data" }
+    # not used in dev environment @{ gid = 4100; name = "lsba-stg-app" },
+    # not used in dev environment @{ gid = 4101; name = "lsba-stg-data" },
+    # not used in dev environment @{ gid = 4200; name = "lsba-prod-app" },
+    # not used in dev environment @{ gid = 4201; name = "lsba-prod-data" }
 )
 $groupscmd = ""
 foreach ($group in $groups) {
@@ -49,13 +48,13 @@ $commands += "getent group | grep lsba"
 $persmissions = @(
     @{ index = 0; owner = "root"; gid = 4000; mode = "2770" },
     @{ index = 1; owner = "root"; gid = 4000; mode = "2770" },
-    @{ index = 2; owner = "root"; gid = 4001; mode = "2770" },
-    @{ index = 3; owner = "root"; gid = 4100; mode = "2770" },
-    @{ index = 4; owner = "root"; gid = 4100; mode = "2770" },
-    @{ index = 5; owner = "root"; gid = 4101; mode = "2770" },
-    @{ index = 6; owner = "root"; gid = 4200; mode = "2770" },
-    @{ index = 7; owner = "root"; gid = 4200; mode = "2770" },
-    @{ index = 8; owner = "root"; gid = 4201; mode = "2770" }
+    @{ index = 2; owner = "root"; gid = 4001; mode = "2770" }
+    # not used in dev environment @{ index = 3; owner = "root"; gid = 4100; mode = "2770" },
+    # not used in dev environment @{ index = 4; owner = "root"; gid = 4100; mode = "2770" },
+    # not used in dev environment @{ index = 5; owner = "root"; gid = 4101; mode = "2770" },
+    # not used in dev environment @{ index = 6; owner = "root"; gid = 4200; mode = "2770" },
+    # not used in dev environment @{ index = 7; owner = "root"; gid = 4200; mode = "2770" },
+    # not used in dev environment @{ index = 8; owner = "root"; gid = 4201; mode = "2770" }
 )
 $chowncmd = ""
 $chmodcmd = ""
@@ -73,9 +72,12 @@ $commands += "ls -la $dir/**/**"
     
 # executes commands in the worker node
 
-foreach ($cmd in $commands) {
-    Write-Host "`n> Executing: $cmd" -ForegroundColor Yellow
-    docker exec -it $NODE bash -c $cmd
+foreach ($node in $NODES) {
+    Write-Host "`nConnecting to node $node..." -ForegroundColor Cyan
+    foreach ($cmd in $commands) {
+        Write-Host "> Executing: $cmd" -ForegroundColor Yellow
+        docker exec -it $node bash -c $cmd
+    }
 }
 
 Write-Host "Finished !" -ForegroundColor Green
