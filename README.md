@@ -127,7 +127,17 @@ Otherwise, you can execute the following command once the virtual environment is
 
 ## 6. Delivery
 
-We use kubernetes to expose our application, hosting will be done on Azure or AWS, but for now we will use minikube (or desktop docker) to test and deliver the application.
+We use Kubernetes to run the application.
+
+- `dev` runs on a local cluster such as Docker Desktop or Minikube.
+- `stg` and `prod` are intended to run on a managed cloud Kubernetes cluster such as AWS or Azure.
+
+For local hosting reasons, the `dev` overlay owns the local storage implementation:
+
+- `k8s/overlays/dev/lsba-pv.yaml` defines a `PersistentVolume` backed by `hostPath`;
+- `k8s/overlays/dev/patch-lsba-sc.yaml` patches the `StorageClass` provisioner to `kubernetes.io/no-provisioner`.
+
+The cloud storage configuration for `stg` and `prod` is not finalized yet and must be completed when the cloud provider and CSI driver are selected.
 
 ### Team process
 
@@ -143,14 +153,16 @@ It is the reason why the team have to follow theses step for delivery:
     - if you perform an update other than the image
     - or k delete -k works too ;)
 
-1. execute kubernetize project
-    - `k apply -k ./k8s/overlays/dev or stg or prod` to deliver the application on the cluster,
+1. execute kubernetize project for your dev environment only (stg and prod are handled by CI/CD pipelines):
+    - `k apply -k ./k8s/overlays/dev`
 1. Check the jobs are working and processed as expected,
 1. Check the cronjob is working after the next scheduled time
     - if jobs are working, the cronjob will work too
     - but it is better to check it after the next scheduled time when an update has been made by one of the source of our data to check if their change is stable
-1. Push to git origin in a new branch
+1. Push to git origin the new branch `deliver/vX.Y.Z`
 1. Ask for a Pull Request.
+1. trigger the `cd-stg` github action to deliver on `stg`.
+1. once all checks are done (note: there is no job only cronjobs), trigger the `cd-prod` github action to deliver on `prod`.
 
 This **process is important** to be sure that the manifest files are in sync with the application, and to be sure that the application is **well delivered** on kubernetes cluster **at any time and from scratch**
 
@@ -177,7 +189,7 @@ Please, follow these steps to deliver the application:
 2. deliver on kubernetes:
 
    ```bash
-   kubectl apply -f k8s/overlay/dev
+   kubectl apply -k k8s/overlays/dev
    ```
 
 3. update cronjob and job:
@@ -270,27 +282,15 @@ In local node (with desktop-docker or minikube):
 
 ### 7.2 Repositories
 
-on local cluter (desktop ), we have to set the file system permissions to be sure that the applications can read and write in the right directories.
+On a local cluster, the `dev` overlay uses a `hostPath` volume at `/mnt/lsba/dev`. The local worker node must have matching directories and permissions so the application can read and write data and logs.
 
-so:
-
-in /mnt/lsba/ permissions are :
+The local setup script prepares only the `dev` directories. `stg` and `prod` storage must be managed by the selected cloud storage provider.
 
 | directory (env) | sub directory | group name | users |
 | --- | --- | --- | --- |
-| dev/ | logs/ | **lsba-dev-app** | lsba-dev-batch-usr, lsba-dev-app-usr |
-| dev/ | data/ | **lsba-dev-app** | lsba-dev-batch-usr, lsba-dev-app-usr |
-| dev/ | postgresql/ | **lsba-dev-data** | lsba-dev-data-usr |
-| stg/ | logs/ | **lsba-stg-app** | lsba-stg-batch-usr, lsba-stg-app-usr |
-| stg/ | data/ | **lsba-stg-app** | lsba-stg-batch-usr, lsba-stg-app-usr |
-| stg/ | postgresql/ | **lsba-stg-data** | lsba-stg-data-usr |
-| prod/ | logs/ | **lsba-prod-app** | lsba-prod-batch-usr, lsba-prod-app-usr |
-| prod/ | data/ | **lsba-prod-app** | lsba-prod-batch-usr, lsba-prod-app-usr |
-| prod/ | postgresql/ | **lsba-prod-data** | lsba-prod-data-usr |
-
-for now, because we don't know where the application will be deployed
-
-- /mnt/lsba/    → root seul
+| /mnt/lsba/dev/ | logs/ | **lsba-dev-app** | lsba-dev-batch-usr, lsba-dev-app-usr |
+| /mnt/lsba/dev/ | data/ | **lsba-dev-app** | lsba-dev-batch-usr, lsba-dev-app-usr |
+| /mnt/lsba/dev/ | postgresql/ | **lsba-dev-data** | lsba-dev-data-usr |
 
 ## 8. Project Inputs and Outputs (to be completed)
 
