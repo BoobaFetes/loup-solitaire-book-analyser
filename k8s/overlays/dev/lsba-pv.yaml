@@ -9,7 +9,7 @@ spec:
   capacity:
     storage: 10Mi
   hostPath:
-    path: /mnt/volumes/lsba/dev
+    path: /mnt/lsba/dev
   claimRef:
     name: lsba-pvc-dev
     namespace: lsba-ns-dev

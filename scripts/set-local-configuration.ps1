@@ -9,7 +9,7 @@ $NODES = @("desktop-worker", "desktop-worker2") # change according to the name o
 $commands = @()
 
 # create directories and subdirectories
-$dir = "/mnt/volumes/lsba"
+$dir = "/mnt/lsba"
 $subDirs = (    
     "$dir/dev/data", 
     "$dir/dev/logs", 

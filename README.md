@@ -263,7 +263,7 @@ In local node (with desktop-docker or minikube):
     k get node # to find the name of the worker node
     docker exec -it <worker_node_name> bash
     # then check the files in the physical volumes and their permissions
-    root@<worker_node_name>:/# ls -l /mnt/volumes/lsba/**/**/
+    root@<worker_node_name>:/# ls -l /mnt/lsba/**/**/
     ```
 
 > we have to use root to check the files in the physical volumes, so we have to add a user for root
@@ -274,7 +274,7 @@ on local cluter (desktop ), we have to set the file system permissions to be sur
 
 so:
 
-in /mnt/volumes/lsba/ permissions are :
+in /mnt/lsba/ permissions are :
 
 | directory (env) | sub directory | group name | users |
 | --- | --- | --- | --- |
@@ -290,7 +290,7 @@ in /mnt/volumes/lsba/ permissions are :
 
 for now, because we don't know where the application will be deployed
 
-- /mnt/volumes/lsba/    → root seul
+- /mnt/lsba/    → root seul
 
 ## 8. Project Inputs and Outputs (to be completed)
 
