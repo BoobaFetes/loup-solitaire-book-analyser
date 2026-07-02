@@ -15,6 +15,8 @@ spec:
         runAsUser: 4001
         runAsGroup: 4000
         fsGroup: 4000
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
         - name: project-volume
           persistentVolumeClaim:
@@ -28,6 +30,11 @@ spec:
           - "sh"
           - "-c"
           - "sleep 70"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
       containers:
         - image: loup-solitaire-book-analyser:v0.1.3
           name: lsba-find-prices

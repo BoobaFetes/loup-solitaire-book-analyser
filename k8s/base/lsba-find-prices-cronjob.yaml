@@ -20,6 +20,8 @@ spec:
             runAsUser: 4001
             runAsGroup: 4000
             fsGroup: 4000
+            seccompProfile:
+              type: RuntimeDefault
           volumes:
             - name: project-volume
               persistentVolumeClaim:
