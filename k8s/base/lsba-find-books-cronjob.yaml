@@ -9,10 +9,17 @@ spec:
   jobTemplate:
     metadata:
       name: lsba-find-books-job
+      labels:
+        role: lsba-batch
     spec:
       backoffLimit: 2 # 2 tentatives max en cas d'echec
       template:
         spec:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 4001
+            runAsGroup: 4000
+            fsGroup: 4000
           volumes:
             - name: project-volume
               persistentVolumeClaim:
@@ -32,6 +39,11 @@ spec:
                 - name: project-volume
                   mountPath: /app/logs
                   subPath: logs
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
               resources:
                 limits:
                   memory: "128Mi"

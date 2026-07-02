@@ -3,13 +3,17 @@ FROM python:3.14-slim
 
 WORKDIR /app
 
+ENV PLAYWRIGHT_BROWSERS_PATH="/ms-playwright"
+ENV HOME="/tmp"
+
 COPY requirements.txt ./
 
 # dépendances python
 RUN pip install --no-cache-dir -r ./requirements.txt
 
 # dépendances playwright: le browser Chromium et ses dépendances pour fonctionner dans un environnement Debian slim
-RUN playwright install chromium --with-deps
+RUN playwright install chromium --with-deps \
+    && chmod -R a+rX "$PLAYWRIGHT_BROWSERS_PATH"
 
 COPY ./src ./src
 
