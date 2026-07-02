@@ -15,8 +15,7 @@ spec:
       backoffLimit: 2 # 2 tentatives max en cas d'echec
       template:
         spec:
-          serviceAccountName: lsba-sa-noright
-          automountServiceAccountToken: false
+          serviceAccountName: lsba-sa-no-access
           securityContext:
             runAsNonRoot: true
             runAsUser: 4001

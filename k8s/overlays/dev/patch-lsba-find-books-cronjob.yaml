@@ -8,7 +8,7 @@ spec:
     spec:
       template:
         spec:
-          serviceAccountName: lsba-sa-noright-dev
+          serviceAccountName: lsba-sa-no-access-dev
           volumes:
             - name: project-volume
               persistentVolumeClaim:

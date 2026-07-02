@@ -8,7 +8,7 @@ spec:
     spec:
       template:
         spec:
-          serviceAccountName: lsba-sa-noright-stg
+          serviceAccountName: lsba-sa-no-access-stg
           securityContext:
               fsGroup: 4100
               runAsGroup: 4100

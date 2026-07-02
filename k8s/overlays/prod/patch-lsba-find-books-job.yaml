@@ -6,7 +6,7 @@ metadata:
 spec:
   template:
     spec:
-      serviceAccountName: lsba-sa-noright-prod
+      serviceAccountName: lsba-sa-no-access-prod
       securityContext:
           fsGroup: 4200
           runAsGroup: 4200
