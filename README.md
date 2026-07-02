@@ -149,15 +149,15 @@ It is the reason why the team have to follow theses step for delivery:
 
 1. create new branch named `deliver/vX.Y.Z` (see bellow for how to version your delivery),
 1. change the manifest (check if your needs are well reflected in manifest files),
-1. delete cronjobs and jobs
+1. delete cronjobs and local dev jobs
     - if you perform an update other than the image
-    - or k delete -k works too ;)
+    - or k delete -k works too -> jobs are namespace so delete the NS delete jobs;)
 
 1. execute kubernetize project for your dev environment only (stg and prod are handled by CI/CD pipelines):
     - `k apply -k ./k8s/overlays/dev`
-1. Check the jobs are working and processed as expected,
+1. Check the local dev jobs are working and processed as expected,
 1. Check the cronjob is working after the next scheduled time
-    - if jobs are working, the cronjob will work too
+    - if local dev jobs are working, the cronjob will work too
     - but it is better to check it after the next scheduled time when an update has been made by one of the source of our data to check if their change is stable
 1. Push to git origin the new branch `deliver/vX.Y.Z`
 1. Ask for a Pull Request.
@@ -192,20 +192,22 @@ Please, follow these steps to deliver the application:
    kubectl apply -k k8s/overlays/dev
    ```
 
-3. update cronjob and job:
+3. update cronjob and local dev jobs:
 
-   > the kubernetize project set the namespace, so be advise to look after it before executing commands to delete cronjob and job.
+   > the kubernetize project set the namespace, so be advise to look after it before executing commands to delete cronjob and local dev jobs.
 
    - **3.1 local environment**
 
    ```bash
    
-   # remove cronjob and job because we can't restart them with "k rollout restart xxx/yyy" command
+   # remove cronjob and local dev job because we can't restart them with "k rollout restart xxx/yyy" command
    k -n <namespace> delete cronjob loup-solitaire-book-analyser-cronjob
    k -n <namespace> delete job loup-solitaire-book-analyser-job
    ```
 
-   SO, you must **delete the cronjob and job** before execute the apply command.
+   Standalone Job resources are only present in the `dev` overlay. `stg` and `prod` deploy CronJobs only.
+
+   SO, in `dev`, you must **delete the cronjob and local dev job** before execute the apply command when needed.
 
    Don't worry, the job is only executed once to be sure the application is well set up, even if it initialize data.
    <br/>

@@ -4,12 +4,17 @@ This document describes the Kubernetes security model used by the LSBA manifests
 
 ## Scope
 
-The current security model applies to the batch workloads:
+The current security model applies to the batch workloads.
+
+Common workloads deployed by all overlays:
+
+- `lsba-find-books-cronjob`
+- `lsba-find-prices-cronjob`
+
+Local `dev`-only one-shot workloads:
 
 - `lsba-find-books-job`
-- `lsba-find-books-cronjob`
 - `lsba-find-prices-job`
-- `lsba-find-prices-cronjob`
 
 Storage implementation details are environment-specific and should be handled by overlays.
 
