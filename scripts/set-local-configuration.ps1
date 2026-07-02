@@ -2,9 +2,8 @@
 # It is not intended to be used as-is in a production environment, but rather to facilitate local development.
 # REMINDER: In a production environment, volumes are typically managed by dedicated storage solutions (e.g., NFS, Ceph, etc.) and do not require this kind of manual initialization.
 
-$NODE = "desktop-worker" # change according to the name of the nodes in your local cluster
+$NODES = @("desktop-worker", "desktop-worker2") # change according to the name of the nodes in your local cluster
 
-Write-Host "Connecting to node $NODE..." -ForegroundColor Cyan
 
 # arrange
 $commands = @()
@@ -73,9 +72,12 @@ $commands += "ls -la $dir/**/**"
     
 # executes commands in the worker node
 
-foreach ($cmd in $commands) {
-    Write-Host "`n> Executing: $cmd" -ForegroundColor Yellow
-    docker exec -it $NODE bash -c $cmd
+foreach ($node in $NODES) {
+    Write-Host "`nConnecting to node $node..." -ForegroundColor Cyan
+    foreach ($cmd in $commands) {
+        Write-Host "> Executing: $cmd" -ForegroundColor Yellow
+        docker exec -it $node bash -c $cmd
+    }
 }
 
 Write-Host "Finished !" -ForegroundColor Green

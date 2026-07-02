@@ -4,16 +4,14 @@
 
 # TODO: clean up volumes in the cloud (AWS or Azure)
 
-$NODE = "desktop-worker" # change according to the name of the nodes in your local cluster
-
-Write-Host "Connecting to node $NODE..." -ForegroundColor Cyan
+$NODES = @("desktop-worker", "desktop-worker2") # change according to the name of the nodes in your local cluster
 
 # arrange
 $commands = @()
 
 # delete directories and subdirectories
 
-$commands += 'rm -rf /mnt/volumes/lsba'
+$commands += 'rm -rf /mnt/volumes'
 
 # delete groups
 
@@ -34,9 +32,12 @@ $commands += "getent group | grep lsba"
 
 # executes commands in the worker node
 
-foreach ($cmd in $commands) {
-    Write-Host "`n> Executing: $cmd" -ForegroundColor Yellow
-    docker exec -it $NODE bash -c $cmd
+foreach ($node in $NODES) {
+    Write-Host "`nConnecting to node $node..." -ForegroundColor Cyan
+    foreach ($cmd in $commands) {
+        Write-Host "> Executing: $cmd" -ForegroundColor Yellow
+        docker exec -it $node bash -c $cmd  
+    }
 }
 
 Write-Host "Finished !" -ForegroundColor Green
