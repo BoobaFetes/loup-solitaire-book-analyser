@@ -30,6 +30,7 @@ loup-solitaire-book-analyser
 ├── .dockerignore             # Files and directories to ignore in Docker builds
 ├── requirements.txt          # Python dependencies for the application
 ├── README.md                 # Documentation for the project
+├── README-security.md        # Kubernetes security model and volume permissions
 └── todo.md                   # TODO list for the project, or tasks that remain to be completed
 ```
 
@@ -209,6 +210,8 @@ Please, follow these steps to deliver the application:
    ```
 
 ## 7. File system
+
+Kubernetes security settings and volume permissions are documented in [README-security.md](README-security.md).
 
 > we use '4' as prefix for user and group to avoid conflict with other projects (if they exists).
 > We have choose 4 because the alias of the project `lsba` has 4 characters.
