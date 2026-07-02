@@ -47,7 +47,6 @@ $metricServer | ConvertTo-Yaml | kubectl -n kube-system apply -f -
 $maxSeconds = 300   # temps max d'attente (5 minutes)
 $interval = 1       # pause entre les essais
 $elapsed = 0
-$attempt = 0
 Write-Host "`n⏳ Waiting for metrics-server to restart (timeout: $maxSeconds s)..." -ForegroundColor Yellow
 while ($elapsed -lt $maxSeconds) {
     $output = kubectl top node 2>&1
@@ -55,8 +54,7 @@ while ($elapsed -lt $maxSeconds) {
         Write-Host "`n✅ Metrics Server is ready !"
         break
     }
-    $attempt++
-    Write-Host -NoNewline "`r❌ Metrics API not available, waiting for $attempt seconds..."
+    Write-Host -NoNewline "`r❌ Metrics API not available, waiting for $elapsed seconds..."
     
     Start-Sleep -Seconds $interval
     $elapsed += $interval
