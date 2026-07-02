@@ -12,7 +12,6 @@ patches:
   - path: patch-lsba-find-books-job.yaml
   - path: patch-lsba-find-prices-cronjob.yaml
   - path: patch-lsba-find-prices-job.yaml
-  - path: patch-lsba-pv.yaml
   - path: patch-lsba-pvc.yaml
         
 

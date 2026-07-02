@@ -9,6 +9,5 @@ resources:
   - lsba-find-prices-cronjob.yaml
   - lsba-find-prices-job.yaml
   - lsba-ns.yaml
-  - lsba-pv.yaml
   - lsba-pvc.yaml
   - lsba-sc.yaml

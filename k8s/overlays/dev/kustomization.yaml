@@ -6,13 +6,14 @@ nameSuffix: -dev
 
 resources:
   - ../../base
+  - lsba-pv.yaml
 
 patches:
   - path: patch-lsba-find-books-cronjob.yaml
   - path: patch-lsba-find-books-job.yaml
   - path: patch-lsba-find-prices-cronjob.yaml
   - path: patch-lsba-find-prices-job.yaml
-  - path: patch-lsba-pv.yaml
+  - path: patch-lsba-sc.yaml
   - path: patch-lsba-pvc.yaml
         
 

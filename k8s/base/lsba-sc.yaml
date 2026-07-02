@@ -2,5 +2,5 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: lsba-sc
-provisioner: kubernetes.io/no-provisioner
-volumeBindingMode: WaitForFirstConsumer # recommandé pour no-provisioner
+provisioner: example.com/unconfigured-storage-provider # patched per overlay
+volumeBindingMode: WaitForFirstConsumer
