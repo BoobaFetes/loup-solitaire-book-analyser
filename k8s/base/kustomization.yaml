@@ -5,9 +5,7 @@ resources:
   - lsba-cm.yaml
   - lsba-sa-no-access.yaml
   - lsba-find-books-cronjob.yaml
-  - lsba-find-books-job.yaml
   - lsba-find-prices-cronjob.yaml
-  - lsba-find-prices-job.yaml
   - lsba-ns.yaml
   - lsba-pvc.yaml
   - lsba-sc.yaml
