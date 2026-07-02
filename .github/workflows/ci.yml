@@ -34,3 +34,18 @@ jobs:
 
       - name: Test
         run: pytest
+    
+  validate-docker:
+    needs: validate-python
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
