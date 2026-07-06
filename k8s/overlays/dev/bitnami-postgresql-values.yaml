@@ -13,17 +13,20 @@ auth:
   database: "lsba-db"
   username: "db_writer"
 
+postgresqlDataDir: /app/postgresql/data
 primary:  
   # Persistent storage
   persistence:
     enabled: true
-    storageClass: "lsba-sc-dev"
+    existingClaim: "lsba-pvc-dev"
     size: 10Mi
     # Access mode
     accessModes:
       - ReadWriteMany # un seule PV pour tous les pods mais permissions distincte entre les pods
     mountPath: /app/postgresql
     subPath: postgresql
+  
+  # Security context  
   podSecurityContext:
     enabled: true
     fsGroup: 4002
