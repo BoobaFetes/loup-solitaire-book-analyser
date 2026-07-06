@@ -11,7 +11,7 @@ resources:
   - lsba-pv.yaml
   - lsba-secret-postgresql-credentials.yaml
 
-patches:
+patches:  
   - path: patch-lsba-find-books-cronjob.yaml
   - path: patch-lsba-find-prices-cronjob.yaml
   - path: patch-lsba-sc.yaml
@@ -20,7 +20,7 @@ patches:
 helmCharts:
 - name: postgresql
   repo: https://charts.bitnami.com/bitnami
-  releaseName: bitnami-postgresql
+  releaseName: lsba-db-postgresql
   namespace: lsba-ns-dev
   version: 18.7.11
   valuesFile: bitnami-postgresql-values.yaml

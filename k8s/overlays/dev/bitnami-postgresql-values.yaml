@@ -2,7 +2,7 @@ global:
   postgresql:
     auth:
       # Use existing secret instead of generating password
-      existingSecret: "postgresql-credentials"
+      existingSecret: "lsba-secret-postgresql-credentials"
       secretKeys:
         adminPasswordKey: "postgres-password"
         userPasswordKey: "password"
@@ -55,7 +55,7 @@ primary:
     allowExternal: false
     ingressNSMatchLabels:
       postgres-access: "true"
-      
+
   # Pod disruption budget
   pdb:
     create: true
