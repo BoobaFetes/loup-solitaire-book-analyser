@@ -1,0 +1,77 @@
+global:
+  postgresql:
+    auth:
+      # Use existing secret instead of generating password
+      existingSecret: "postgresql-credentials"
+      secretKeys:
+        adminPasswordKey: "postgres-password"
+        userPasswordKey: "password"
+        replicationPasswordKey: "replication-password"
+
+auth:
+  # Database and user to create
+  database: "lsba-db"
+  username: "db_writer"
+
+primary:  
+  # Persistent storage
+  persistence:
+    enabled: true
+    storageClass: "lsba-sc-dev"
+    size: 10Mi
+    # Access mode
+    accessModes:
+      - ReadWriteMany # un seule PV pour tous les pods mais permissions distincte entre les pods
+    mountPath: /app/postgresql
+    subPath: postgresql
+  podSecurityContext:
+    enabled: true
+    fsGroup: 4002
+  containerSecurityContext:
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 4000
+    runAsGroup: 4002
+    privileged: false
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: "RuntimeDefault"
+
+  # Resource allocation
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 1Gi
+      cpu: 2000m
+
+  # Network policy
+  networkPolicy:
+    enabled: true
+    allowExternal: false
+    ingressNSMatchLabels:
+      postgres-access: "true"
+      
+  # Pod disruption budget
+  pdb:
+    create: true
+    minAvailable: 1 # always keep at least 1 pod available
+
+  # Liveness and readiness probes
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6

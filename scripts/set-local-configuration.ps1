@@ -46,9 +46,9 @@ $commands += "getent group | grep lsba"
 # create permissions for k8s hostpath volumes
 
 $persmissions = @(
-    @{ index = 0; owner = "root"; gid = 4000; mode = "2770" },
-    @{ index = 1; owner = "root"; gid = 4000; mode = "2770" },
-    @{ index = 2; owner = "root"; gid = 4001; mode = "2770" }
+    @{ index = 0; owner = "root"; gid = 4001; mode = "2770" },
+    @{ index = 1; owner = "root"; gid = 4001; mode = "2770" },
+    @{ index = 2; owner = "root"; gid = 4002; mode = "2770" }
     # not used in dev environment @{ index = 3; owner = "root"; gid = 4100; mode = "2770" },
     # not used in dev environment @{ index = 4; owner = "root"; gid = 4100; mode = "2770" },
     # not used in dev environment @{ index = 5; owner = "root"; gid = 4101; mode = "2770" },
