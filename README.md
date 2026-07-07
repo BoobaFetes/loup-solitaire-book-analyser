@@ -166,6 +166,15 @@ It is the reason why the team have to follow theses step for delivery:
 1. Check the cronjob is working after the next scheduled time
     - if local dev jobs are working, the cronjob will work too
     - but it is better to check it after the next scheduled time when an update has been made by one of the source of our data to check if their change is stable
+1. Check the database is well updated:
+    - get the password : `k get secret lsba-secret-postgresql-credentials-dev -o yaml`
+    - decode it :`docker exec -it desktop-worker sh -c 'echo "<the password in base 64>" | base64 -d'`
+    - copy the password and connect to the database with the following command: `kubectl exec -it -n lsba-ns-dev lsba-db-postgresql-dev-0 -- psql -U db_migration_usr -d lsba_db`
+    - in psql, use comands :
+         1. `\du`: to list users
+         1. `\l` : to list databases
+         1. `\c <database_name>` : to connect to a database
+         1. `\dt` : to list tables in the current database
 1. Push to git origin the new branch `deliver/vX.Y.Z`
 1. Ask for a Pull Request.
 1. trigger the `cd-stg` github action to deliver on `stg`.

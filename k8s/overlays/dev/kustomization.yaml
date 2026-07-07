@@ -6,6 +6,7 @@ nameSuffix: -dev
 
 resources:
   - ../../base
+  - ../../database
   - lsba-find-books-job.yaml
   - lsba-find-prices-job.yaml
   - lsba-pv.yaml

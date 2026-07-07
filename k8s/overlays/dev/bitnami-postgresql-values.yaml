@@ -4,14 +4,14 @@ global:
       # Use existing secret instead of generating password
       existingSecret: "lsba-secret-postgresql-credentials"
       secretKeys:
-        adminPasswordKey: "postgres-password"
-        userPasswordKey: "password"
-        replicationPasswordKey: "replication-password"
+        adminPasswordKey: "postgres-password" # should be updated by the CD pipeline to a strong password 
+        userPasswordKey: "password" # should be updated by the CD pipeline to a strong password 
+        replicationPasswordKey: "replication-password" # should be updated by the CD pipeline to a strong password
 
 auth:
-  # Database and user to create
-  database: "lsba-db"
-  username: "db_writer"
+  # Maintenance user and database created by Bitnami at first startup.
+  database: "lsba_db"
+  username: "db_migration_usr"
 
 postgresqlDataDir: /app/postgresql/data
 primary:  
@@ -78,3 +78,7 @@ primary:
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 6
+  
+  # Init scripts
+  initdb:
+    scriptsSecret: lsba-db-scripts
