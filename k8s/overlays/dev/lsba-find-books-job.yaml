@@ -31,6 +31,9 @@ spec:
                 optional: false
           volumeMounts:
             - name: project-volume
+              mountPath: /app/assets
+              subPath: assets
+            - name: project-volume
               mountPath: /app/logs
               subPath: logs
           securityContext:

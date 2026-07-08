@@ -12,6 +12,7 @@ $commands = @()
 $dir = "/mnt/lsba"
 $subDirs = (
     "$dir/dev/logs", 
+    "$dir/dev/assets", 
     "$dir/dev/postgresql" 
 )
 
