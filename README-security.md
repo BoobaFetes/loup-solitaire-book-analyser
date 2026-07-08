@@ -47,6 +47,8 @@ References:
 
 ## Kubernetes API Access
 
+### `lsba-sa-no-access` ServiceAccount
+
 The workloads use the `lsba-sa-no-access` ServiceAccount.
 
 The ServiceAccount disables automatic token mounting:
@@ -179,7 +181,6 @@ The application mounts two subdirectories from the project volume:
 
 | Mount path | subPath | Group Ids | Intended writer |
 | --- | --- | --- | --- |
-| `/app/data` | `data` | `4x01` | for applications |
 | `/app/logs` | `logs` | `4x01` | for applications |
 | `/app/postgresql` | `postgresql` | `4x02` | for postgresql only |
 
