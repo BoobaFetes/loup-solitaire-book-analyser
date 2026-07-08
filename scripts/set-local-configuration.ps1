@@ -10,16 +10,9 @@ $commands = @()
 
 # create directories and subdirectories
 $dir = "/mnt/lsba"
-$subDirs = (    
-    "$dir/dev/data", 
+$subDirs = (
     "$dir/dev/logs", 
     "$dir/dev/postgresql" 
-    # not used in dev environment "$dir/stg/data", 
-    # not used in dev environment "$dir/stg/logs", 
-    # not used in dev environment "$dir/stg/postgresql",
-    # not used in dev environment "$dir/prod/data", 
-    # not used in dev environment "$dir/prod/logs", 
-    # not used in dev environment "$dir/prod/postgresql"
 )
 
 $commands += "mkdir -p $dir"
@@ -45,12 +38,6 @@ $persmissions = @(
     @{ index = 0; owner = "root"; gid = 4001; mode = "2770" },
     @{ index = 1; owner = "root"; gid = 4001; mode = "2770" },
     @{ index = 2; owner = "root"; gid = 4002; mode = "2770" }
-    # not used in dev environment @{ index = 3; owner = "root"; gid = 4100; mode = "2770" },
-    # not used in dev environment @{ index = 4; owner = "root"; gid = 4100; mode = "2770" },
-    # not used in dev environment @{ index = 5; owner = "root"; gid = 4101; mode = "2770" },
-    # not used in dev environment @{ index = 6; owner = "root"; gid = 4200; mode = "2770" },
-    # not used in dev environment @{ index = 7; owner = "root"; gid = 4200; mode = "2770" },
-    # not used in dev environment @{ index = 8; owner = "root"; gid = 4201; mode = "2770" }
 )
 $chowncmd = ""
 $chmodcmd = ""
