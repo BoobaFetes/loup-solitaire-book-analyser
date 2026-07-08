@@ -35,10 +35,7 @@ spec:
                 - configMapRef:
                     name: lsba-cm
                     optional: false
-              volumeMounts:
-                - name: project-volume
-                  mountPath: /app/data
-                  subPath: data
+              volumeMounts:                
                 - name: project-volume
                   mountPath: /app/logs
                   subPath: logs
