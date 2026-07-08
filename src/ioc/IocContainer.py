@@ -7,7 +7,7 @@ from typing import TypeVar, cast
 from dependency_injector import containers, providers
 
 from adapters.browser import BrowserAdapter, PageHandlerAdapter
-from adapters.database import tinydb
+from adapters.database import sqlalchemy
 from adapters.http import HttpClientAdapter
 from adapters.os import FileSystemAdapter
 from adapters.usecase import amazon, biblio_aventurier, gallimard
@@ -123,7 +123,7 @@ class IocContainer(containers.DeclarativeContainer):
 
     # region database adapters
 
-    unit_of_work = tinydb.make_unit_of_work(config=config)
+    unit_of_work = sqlalchemy.make_unit_of_work(config=config)
 
     # endregion
 
