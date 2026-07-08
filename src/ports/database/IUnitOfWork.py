@@ -26,7 +26,7 @@ class IUnitOfWork(Protocol):
         """
         ...
 
-    async def begin_transaction(self, transaction_name: str) -> None:
+    async def begin_transaction(self) -> None:
         """
         Begin a new transaction.
 

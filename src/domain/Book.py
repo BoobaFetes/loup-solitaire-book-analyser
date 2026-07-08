@@ -1,11 +1,12 @@
-from pydantic import BaseModel, Field, model_validator
+from dataclasses import dataclass
+from datetime import date
 
 from domain.BookPrice import BookPrice
 
 
-class Book(BaseModel):
+@dataclass
+class Book:
     """Represents a book entity.
-
 
     id: the unique identifier of the book, set to 0 by default and will be updated from numero if not set.
 
@@ -31,28 +32,18 @@ class Book(BaseModel):
         BaseModel: The base model class from Pydantic.
     """
 
-    id: int = Field(default=0)
-    url: str
-    isbn: str
-    numero: int
-    titre: str
-    authors: list[str] = Field(default_factory=lambda: [])
-    lastParutionDate: str = Field(default_factory=lambda: "1900-01-01")
-    description: str = Field(default_factory=lambda: "")
-    official: bool = Field(default_factory=lambda: False)
-    prices: list[BookPrice] = Field(default_factory=lambda: [])
-    image: str = Field(default_factory=lambda: "")
-
-    @model_validator(mode="after")
-    def set_id_from_numero(self) -> "Book":
-        """Sets the ID of the book from its numero if ID is not already set.
-
-        Returns:
-            Book: The updated book instance.
-        """
-        if self.id == 0:
-            self.id = self.numero
-        return self
+    id: int = 0
+    url: str = ""
+    isbn: str = ""
+    numero: int = 0
+    titre: str = ""
+    authors: list[str] = []
+    lastParutionDate: date = date.min
+    description: str = ""
+    official: bool = False
+    prices: list[BookPrice] = []
+    image: str = ""
+    acquired: bool = False
 
     def __str__(self) -> str:
         return f"[ISBN: {self.isbn:>13}] [image: {'true' if self.image else 'false':<5}] {self.numero:>3}. {self.titre:<40} ({self.url:<100}) [parution date: {self.lastParutionDate}] [authors: {', '.join(self.authors)}]"

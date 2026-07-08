@@ -1,10 +1,8 @@
 from datetime import date as Date
 from datetime import datetime, timezone
 
-from pydantic import BaseModel, Field
 
-
-class BookPrice(BaseModel):
+class BookPrice:
     """Represents the price of a book.
 
         key: isbn + source + date
@@ -16,7 +14,7 @@ class BookPrice(BaseModel):
 
     isbn: str
     source: str
-    date: Date = Field(default_factory=lambda: datetime.now(timezone.utc).date())
+    date: Date = datetime.now(timezone.utc).date()
     price: float
     url: str
     currency: str

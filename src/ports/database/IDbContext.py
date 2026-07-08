@@ -26,7 +26,7 @@ class IDbContext(Protocol):
         """
         ...
 
-    async def begin_transaction(self, transaction_name: str):
+    async def begin_transaction(self):
         """
         Begin a new transaction.
 
