@@ -1,0 +1,1 @@
+kubectl port-forward -n lsba-ns-dev svc/lsba-db-postgresql-dev 5432:5432

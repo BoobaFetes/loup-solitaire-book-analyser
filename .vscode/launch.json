@@ -2,6 +2,17 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "launch main.py",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "program": "${workspaceFolder}/src/main.py",
+      "console": "integratedTerminal",
+      // "preLaunchTask": "check typings",
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
       "name": "launch find_books.py",
       "type": "debugpy",
       "request": "launch",
