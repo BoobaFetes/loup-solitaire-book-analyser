@@ -23,7 +23,7 @@ loup-solitaire-book-analyser
 │   │   └── __init__.py       # Port interfaces for communication between layers
 │   └── usecases
 │       └── __init__.py       # Business logic for managing tomes
-├── data                      # Directory for data storage (like html files representing books and their prices, used to update unit tests)
+├── assets                      # Directory for image or html storage
 ├── logs                      # Directory for log files
 ├── Dockerfile                # Dockerfile for containerizing the application
 ├── .dockerignore             # Files and directories to ignore in Docker builds
