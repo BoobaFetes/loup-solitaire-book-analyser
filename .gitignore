@@ -50,4 +50,4 @@ data/
 
 # delivery process
 k8s/overlays/*-build.yaml
-k8s/overlays/**/charts/
+k8s/**/charts/

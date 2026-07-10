@@ -25,7 +25,6 @@ loup-solitaire-book-analyser
 │       └── __init__.py       # Business logic for managing tomes
 ├── data                      # Directory for data storage (like html files representing books and their prices, used to update unit tests)
 ├── logs                      # Directory for log files
-├── postgresql                # Directory for persisted data with PostgreSQL
 ├── Dockerfile                # Dockerfile for containerizing the application
 ├── .dockerignore             # Files and directories to ignore in Docker builds
 ├── requirements.txt          # Python dependencies for the application
@@ -94,11 +93,16 @@ loup-solitaire-book-analyser
   
 6. Install desktop-docker and launch it.
 
-7. Execute the following command to finalize setup on your local machine:
+7. Execute the following command to setup your local machine:
 
    ```bash
-   & ./scripts/set-local-configuration.ps1
+   & ./scripts/reload-infra.ps1
    ```
+
+   > the scipt will create the local configuration on k8s, create linux folders for volumes and their permissions
+   > **But you have to create a desktop-docker instance first !**
+   > script arguments are:
+   > - `-clean` : delete the local configuration from you local desktop-docker instance (volumes, linux permissions)
 
 8. Build the manifest files on your local cluster (desktop-docker or minikube):
 
@@ -129,8 +133,10 @@ Otherwise, you can execute the following command once the virtual environment is
 (.venv) PS > python src/main.py
 ```
 
-don't forget to post-forward the port 5432 for the database if you want to connect to it from your local machine when developping the application.
-`kubectl port-forward -n lsba-ns-dev svc/lsba-db-postgresql-dev 5432:5432`
+Don't forget to post-forward the port 5432 for the database if you want to connect to it from your local machine when developping the application.
+
+You can use the following command to post-forward the database on your local machine:
+`./scripts/serve-local-database.ps1`
 
 ---
 
@@ -147,6 +153,41 @@ For local hosting reasons, the `dev` overlay owns the local storage implementati
 - `k8s/overlays/dev/patch-lsba-sc.yaml` patches the `StorageClass` provisioner to `kubernetes.io/no-provisioner`.
 
 The cloud storage configuration for `stg` and `prod` is not finalized yet and must be completed when the cloud provider and CSI driver are selected.
+
+### Database Delivery Workflow
+
+PostgreSQL is defined in `k8s/database`, a Kustomize base package wrapping the Bitnami Helm chart. Environment overlays include this package when they need to deploy the database, then add their own storage, credentials and patches.
+
+The intended workflow is:
+
+#### CI
+
+- Validate Python code with type checking, linting and tests.
+- Build the Docker image with `push: false`.
+- This build only proves that an image can be produced. The image is not published by CI because delivery is explicit: we publish an artifact only when a selected feature set or version is ready to be delivered.
+
+#### CD
+
+1. **Delivers infra: Kustomize / Helm**
+   - Build and apply the Kubernetes manifests.
+   - The Bitnami chart starts PostgreSQL.
+   - The chart creates `lsba_db`.
+   - The chart creates the maintenance login role `db_migration_usr`.
+
+2. **Delivers source code**
+   - Build and publish the Docker image used by Kubernetes workloads.
+   - Create or update the PostgreSQL Kubernetes Secret from GitHub Environment secrets.
+   - Handles password rotation for `stg` and `prod` environments.
+     > For now, password rotation means updating GitHub Environment secrets manually and rerunning the CD workflow.
+     > We are considering a CronJob to automatically rotate `stg` and `prod` passwords later.
+
+3. **Runs database migrations with Alembic**
+   - Run migrations with `db_migration_usr`.
+   - Create and update tables, constraints, indexes and object-level grants.
+
+Application login roles such as `db_batch_usr` and `db_webapp_usr` are not created by Bitnami `initdb` scripts. Their creation is still to be defined, but they must exist before Alembic grants permissions to them.
+
+`.github/workflows/cd.yml` is a disabled draft documenting this future `stg`/`prod` delivery shape.
 
 ### Team process
 
@@ -180,8 +221,8 @@ It is the reason why the team have to follow theses step for delivery:
          1. `\dt` : to list tables in the current database
 1. Push to git origin the new branch `deliver/vX.Y.Z`
 1. Ask for a Pull Request.
-1. trigger the `cd-stg` github action to deliver on `stg`.
-1. once all checks are done (note: there is no job only cronjobs), trigger the `cd-prod` github action to deliver on `prod`.
+1. trigger the CD GitHub Action with `env_target=stg`.
+1. once all checks are done (note: there is no job only cronjobs), trigger the CD GitHub Action with `env_target=prod`.
 
 This **process is important** to be sure that the manifest files are in sync with the application, and to be sure that the application is **well delivered** on kubernetes cluster **at any time and from scratch**
 

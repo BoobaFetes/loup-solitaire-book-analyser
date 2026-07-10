@@ -79,6 +79,28 @@ primary:
     timeoutSeconds: 5
     failureThreshold: 6
   
-  # Init scripts
+  # Initialization notes only. Application roles and passwords are managed by a
+  # repeatable post-infra operation, not by PostgreSQL first-boot scripts.
   initdb:
-    scriptsSecret: lsba-db-scripts
+    scripts:
+      00-lsba-bootstrap-notes.sql: |
+        -- LSBA database bootstrap notes.
+        --
+        -- The Bitnami chart creates the maintenance database and user:
+        --   - database: lsba_db
+        --   - migration user: db_migration_usr
+        --
+        -- Application login roles are intentionally not created here.
+        -- They must be managed by a repeatable operational step because:
+        --   - credentials may need rotation after the database is initialized;
+        --   - initdb scripts only run once on an empty data directory;
+        --   - staging and production must source credentials from secret management;
+        --   - Alembic migrations should own schema changes and object permissions.
+        --
+        -- Expected future application login roles:
+        --   - db_batch_usr: batch jobs, write access through controlled grants;
+        --   - db_webapp_usr: web application, limited read/write access;
+        --   - db_analytics_usr: read-only reporting access if analytics is introduced.
+        --
+        -- A future maintenance job should create/update these roles and rotate
+        -- their passwords before application workloads are rolled out.
