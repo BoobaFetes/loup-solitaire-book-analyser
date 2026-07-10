@@ -129,6 +129,9 @@ Otherwise, you can execute the following command once the virtual environment is
 (.venv) PS > python src/main.py
 ```
 
+don't forget to post-forward the port 5432 for the database if you want to connect to it from your local machine when developping the application.
+`kubectl port-forward -n lsba-ns-dev svc/lsba-db-postgresql-dev 5432:5432`
+
 ---
 
 ## 6. Delivery
