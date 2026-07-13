@@ -3,7 +3,7 @@ from datetime import date
 from sqlalchemy import Boolean, Date, Integer, String, Unicode
 from sqlalchemy.orm import Mapped, mapped_column
 
-from adapters.database.sqlalchemy.entities.EntityBase import EntityBase
+from persistence.sqlalchemy.entities.EntityBase import EntityBase
 
 # attention pour terminer les relations entre entitées : from typing import List
 # attention pour terminer les relations entre entitées : from typing import Optional

@@ -1,7 +1,7 @@
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from adapters.database.sqlalchemy.entities.EntityBase import EntityBase
+from persistence.sqlalchemy.entities.EntityBase import EntityBase
 
 
 class AuthorEntity(EntityBase):

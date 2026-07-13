@@ -40,6 +40,22 @@
       "request": "launch",
       "script": "${file}",
       "cwd": "${fileDirname}"
+    },
+    {
+      "name": "launch alembic",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "module": "alembic",
+      "args": [
+        "-c",
+        "${workspaceFolder}/src/migrations/alembic.ini",
+        "upgrade",
+        "head"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env"
     }
   ]
 }

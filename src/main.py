@@ -2,7 +2,10 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, func, select
+from sqlalchemy.orm import Session
+
+from persistence.sqlalchemy.entities.DbProbeEntity import DbProbeEntity
 
 
 def main():
@@ -26,9 +29,16 @@ def main():
     connection_string = os.environ["CONNECTION_STRING_BATCH"]
     engine = create_engine(connection_string)
     try:
-        with engine.connect() as connection:
-            result = connection.execute(text("SELECT 1")).scalar_one()
-            print(f"connexion base de données OK : SELECT 1 = {result}")
+        with Session(engine) as session:
+            probe = DbProbeEntity(message="test de connexion depuis main.py")
+            session.add(probe)
+            session.commit()
+
+            count = session.scalar(select(func.count()).select_from(DbProbeEntity))
+            print(
+                "connexion base de données OK : "
+                f"db_probe id={probe.id}, total={count}"
+            )
     except Exception as e:
         print(f"erreur de connexion à la base de données : {e}")
     finally:
