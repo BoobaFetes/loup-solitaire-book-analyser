@@ -4,9 +4,9 @@ global:
       # Use existing secret instead of generating password
       existingSecret: "lsba-secret-postgresql-credentials"
       secretKeys:
-        adminPasswordKey: "postgres-password" # should be updated by the CD pipeline to a strong password 
-        userPasswordKey: "password" # should be updated by the CD pipeline to a strong password 
-        replicationPasswordKey: "replication-password" # should be updated by the CD pipeline to a strong password
+        adminPasswordKey: "postgres_pwd_key" # should be updated by the CD pipeline to a strong password 
+        userPasswordKey: "db_migration_usr_pwd_key" # should be updated by the CD pipeline to a strong password 
+        replicationPasswordKey: "db_replication_usr_pwd_key" # should be updated by the CD pipeline to a strong password, not used yet but required by the Bitnami chart
 
 auth:
   # Maintenance user and database created by Bitnami at first startup.

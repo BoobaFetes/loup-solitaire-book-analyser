@@ -44,7 +44,22 @@ loup-solitaire-book-analyser
 - Docker (for containerization)
 - Docker-desktop or Minikube (for Kubernetes testing and deployment)
 
-## 4. Installation
+## 4. Command Reminder
+
+Useful local commands:
+
+| command | usage |
+| --- | --- |
+| `& ./scripts/reload-infra.ps1` | Recreate the local `dev` infrastructure, build `k8s/overlays/dev-build.yaml`, apply it, then port-forward PostgreSQL. |
+| `& ./scripts/reload-infra.ps1 -Clean` | Delete the local `dev` Kubernetes resources and clean local node folders without recreating them. |
+| `& ./scripts/serve-local-database.ps1` | Port-forward PostgreSQL on `localhost:5432`. |
+| `& ./scripts/new-docker-image.ps1` | Build the local Docker image with the default image name and tag. |
+| `& ./scripts/new-docker-image.ps1 -image <name> -tag <tag>` | Build a local Docker image with a custom name and tag. |
+| `kustomize build ./k8s/overlays/dev/ --enable-helm > ./k8s/overlays/dev-build.yaml` | Generate the local development manifest file. |
+| `k apply -f ./k8s/overlays/dev-build.yaml` | Apply the generated local development manifests. |
+| `k delete -f ./k8s/overlays/dev-build.yaml` | Delete the generated local development manifests from the cluster. |
+
+## 5. Installation (local development only)
 
 1. Clone the repository:
 
@@ -110,9 +125,15 @@ loup-solitaire-book-analyser
     kustomize build ./k8s/overlays/dev/ --enable-helm | kubectl apply -f -
    ```
 
+9. don't forget to serve the local database on your local machine if you want to connect to it from your local machine when developping the application.
+
+   ```bash
+   & ./scripts/serve-local-database.ps1
+   ```
+
 ---
 
-## 5. Running the Application
+## 6. Running the Application
 
 ### for CI/CD
 
@@ -140,7 +161,7 @@ You can use the following command to post-forward the database on your local mac
 
 ---
 
-## 6. Delivery
+## 7. Delivery
 
 We use Kubernetes to run the application.
 
@@ -189,7 +210,7 @@ Application login roles such as `db_batch_usr` and `db_webapp_usr` are not creat
 
 `.github/workflows/cd.yml` is a disabled draft documenting this future `stg`/`prod` delivery shape.
 
-### Team process
+### Team process (on local development)
 
 We choose to follow a specific process with git to track every move on the kubernetes clusters.
 
@@ -197,16 +218,21 @@ So we are using manifest files and versioning them.
 
 It is the reason why the team have to follow theses step for delivery:
 
-1. create new branch named `deliver/vX.Y.Z` (see bellow for how to version your delivery),
-1. change the manifest (check if your needs are well reflected in manifest files),
+1. create new branch named `deliver/vX.Y.Z` based on the `main` branch (see bellow for how to version your delivery)
+1. for your local machine execute `& ./scripts/reload-infra.ps1` to reload your local infrastructure
+1. change the manifests (check if your needs are well reflected in manifest files)
 1. delete cronjobs and local dev jobs
     - if you perform an update other than the image
-    - or `k delete -k` works too -> jobs are namespaced so delete the NS delete jobs ;)
+    - or `k delete  -f ./k8s/overlays/dev-build.yaml;` works too -> jobs are namespaced so delete the NS delete jobs ;)
 
 1. execute kubernetize project for your dev environment only (stg and prod are handled by CI/CD pipelines):
-    - `kustomize build ./k8s/overlays/dev/ --enable-helm > ./k8s/overlays/dev-build.yaml`
-    - `k apply -f ./k8s/overlays/dev-build.yaml`
-1. Check the local dev jobs are working and processed as expected,
+
+    ```bash
+    kustomize build ./k8s/overlays/dev/ --enable-helm > ./k8s/overlays/dev-build.yaml; 
+    k apply -f ./k8s/overlays/dev-build.yaml;
+    ```
+
+1. Check the local dev jobs are working and processed as expected
 1. Check the cronjob is working after the next scheduled time
     - if local dev jobs are working, the cronjob will work too
     - but it is better to check it after the next scheduled time when an update has been made by one of the source of our data to check if their change is stable
@@ -285,18 +311,18 @@ Please, follow these steps to deliver the application:
    k -n <namespace> set image job/dev-loup-solitaire-book-analyser-job loup-solitaire-book-analyser=loup-solitaire-book-analyser:vX.Y.Z
    ```
 
-## 7. File system
+## 8. File system
 
 Kubernetes security settings and volume permissions are documented in [README-security.md](README-security.md).
 
 > we use '4' as prefix for user and group to avoid conflict with other projects (if they exists).
 > We have choose 4 because the alias of the project `lsba` has 4 characters.
 
-### 7.1 Users and Groups
+### 8.1 Users and Groups
 
 see the security model in [README-security.md](README-security.md#user-and-group-ids) for more details.
 
-### 7.2 Repositories
+### 8.2 Repositories
 
 On a local cluster, the `dev` overlay uses a `hostPath` volume at `/mnt/lsba/dev`. The local worker node must have matching directories and permissions so the application can read and write data and logs.
 
@@ -308,13 +334,13 @@ The local setup script prepares only the `dev` directories. `stg` and `prod` sto
 | /mnt/lsba/dev/ | data/ | **lsba-dev-app** | lsba-dev-batch-usr, lsba-dev-app-usr |
 | /mnt/lsba/dev/ | postgresql/ | **lsba-dev-data** | lsba-dev-data-usr |
 
-## 8. Project Inputs and Outputs (to be completed)
+## 9. Project Inputs and Outputs (to be completed)
 
 je me demande si je ne devrais pas faire un HLM puis un LLM par environnement (local avec desktop-docker et stg/prod avec azure ou aws) pour bien représenter les inputs et outputs par environnement.
 
 par contre les LLM auront naturellement des inputs et outputs différents, mais je ne sais pas si c'est une bonne idée de faire un HLM par environnement. (GROS DOUTE surtout que le HLM est fait pour représenter les fonctionnalités normalement mais si on considère un HLM comme représentation technique alors dans ce cas cela represente aussi les inputs et output de chaque block donc ca complixifie inutilement les choses je pense)
 
-### 8.1 Inputs
+### 9.1 Inputs
 
 #### web app
 
@@ -334,7 +360,7 @@ par contre les LLM auront naturellement des inputs et outputs différents, mais 
 | --- | --- | --- | --- |
 | user | url of the page to analyse | http request | web app |
 
-### 8.2 Outputs
+### 9.2 Outputs
 
 #### web app
 
@@ -354,10 +380,10 @@ par contre les LLM auront naturellement des inputs et outputs différents, mais 
 | --- | --- | --- | --- |
 | user | url of the page to analyse | http request | web app |
 
-## 9. Contributing
+## 10. Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request for any enhancements or bug fixes.
 
-## 10. License
+## 11. License
 
 This project is licensed under the MIT License. See the LICENSE file for details.

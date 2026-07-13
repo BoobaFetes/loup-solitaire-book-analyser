@@ -92,6 +92,11 @@ jobs:
           echo "Kubernetes authentication is intentionally not configured yet."
           echo "Future CD should configure kubectl from the selected GitHub Environment."
 
+      - name: Apply Kubernetes manifests
+        run: |
+          kustomize build "k8s/overlays/$TARGET_ENV" --enable-helm \
+            | kubectl apply -f -
+
       - name: Create or update PostgreSQL credential Secret
         # This step mirrors GitHub Environment secrets into Kubernetes.
         # It does not generate or rotate passwords by itself.
@@ -107,11 +112,6 @@ jobs:
             --from-literal=replication-password="$REPLICATION_PASSWORD" \
             --dry-run=client \
             -o yaml \
-            | kubectl apply -f -
-
-      - name: Apply Kubernetes manifests
-        run: |
-          kustomize build "k8s/overlays/$TARGET_ENV" --enable-helm \
             | kubectl apply -f -
 
       - name: Placeholder for application database roles
