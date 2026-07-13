@@ -71,9 +71,9 @@ The groups are 4x0y: where x is the environment (dev, staging, prod) and y is th
 
 **environment value (x) is:**
 
-- 1 for dev
-- 2 for staging
-- 3 for prod
+- 0 for dev
+- 1 for staging
+- 2 for prod
 
 **each group type (y) is:**
 
@@ -95,9 +95,9 @@ The users are for linux permissions :
 
 | env | user id | user name | group id |
 | --- | ------- | --------- | -------- |
-| dev | `4000` | **lsba-dev-usr** | `4000` and `4001` |
-| stg | `4100` | **lsba-stg-usr** | `4100` and `4101` |
-| prod | `4200` | **lsba-prod-usr** | `4200` and `4201` |
+| dev | `4000` | **lsba-dev-usr** | `4001` and `4002` |
+| stg | `4100` | **lsba-stg-usr** | `4101` and `4102` |
+| prod | `4200` | **lsba-prod-usr** | `4201` and `4202` |
 
 > In K8s manifests, we use user id to do not use root (runAsNonRoot need a runAsUser), but only the group id is used for permission in the linux file system.
 > WHY are user not set in linux ?
@@ -177,11 +177,12 @@ The `wait-for-find-books-ends` initContainer used by `lsba-find-prices-job` foll
 
 > When using a cloud storage provider, the CSI driver and the Pod `fsGroup` behavior should be validated for the selected storage class.
 
-The application mounts two subdirectories from the project volume:
+The application mounts three subdirectories from the project volume:
 
 | Mount path | subPath | Group Ids | Intended writer |
 | --- | --- | --- | --- |
-| `/app/logs` | `logs` | `4x01` | for applications |
+| `/app/assets` | `assets` | `4x01` | for applications images or other static assets |
+| `/app/logs` | `logs` | `4x01` | for applications logs |
 | `/app/postgresql` | `postgresql` | `4x02` | for postgresql only |
 
 ## Verification
@@ -189,9 +190,9 @@ The application mounts two subdirectories from the project volume:
 Render each environment and verify the security settings in the generated manifests:
 
 ```bash
-kustomize build k8s/overlays/dev
-kustomize build k8s/overlays/stg
-kustomize build k8s/overlays/prod
+kustomize build ./k8s/overlays/dev
+kustomize build ./k8s/overlays/stg
+kustomize build ./k8s/overlays/prod
 ```
 
 Expected checks:

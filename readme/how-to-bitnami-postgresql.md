@@ -8,11 +8,11 @@ from documentation/help : <https://oneuptime.com/blog/post/2026-01-17-helm-postg
 
 ### Single instance Deployment
 
-![alt text](README-resources/bitnami-postgresql-single-instance.png)
+![alt text](how-to-bitnami-postgresql/single-instance.png)
 
 ### High Availability with Replication
 
-![alt text](README-resources/bitnami-postgresql-high-availability.png)
+![alt text](how-to-bitnami-postgresql/high-availability.png)
 
 ## Installation
 
