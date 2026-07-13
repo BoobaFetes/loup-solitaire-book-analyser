@@ -12,9 +12,9 @@ Toutes les commandes sont a lancer depuis la racine du repository en **ayant act
 
 ```powershell
 python src/migrations/bootstrap_roles.py
-alembic -c src/migrations/alembic.ini revision -m "describe database change"
-alembic -c src/migrations/alembic.ini upgrade head
-alembic -c src/migrations/alembic.ini downgrade -1
+alembic revision -m "describe database change"
+alembic upgrade head
+alembic downgrade -1
 python src/main.py
 ```
 
@@ -50,7 +50,7 @@ Il donne aussi les droits de connexion a la base et d'utilisation du schema.
 Creer une nouvelle migration :
 
 ```powershell
-alembic -c src/migrations/alembic.ini revision -m "describe database change"
+alembic revision -m "describe database change"
 ```
 
 Alembic cree un nouveau fichier dans `src/migrations/versions/`.
@@ -122,7 +122,7 @@ Process de validation local :
 2. Appliquer la migration.
 
    ```powershell
-   alembic -c src/migrations/alembic.ini upgrade head
+   alembic upgrade head
    ```
 
 3. Verifier le schema dans PostgreSQL.
@@ -141,13 +141,13 @@ Process de validation local :
 4. Tester le rollback.
 
    ```powershell
-   alembic -c src/migrations/alembic.ini downgrade -1
+   alembic downgrade -1
    ```
 
 5. Revenir a la derniere revision.
 
    ```powershell
-   alembic -c src/migrations/alembic.ini upgrade head
+   alembic upgrade head
    ```
 
 Si les entites SQLAlchemy sont deja a jour, il est possible de generer une
@@ -155,7 +155,7 @@ base de migration avec `--autogenerate`, mais le resultat doit toujours etre
 relu et corrige avant execution :
 
 ```powershell
-alembic -c src/migrations/alembic.ini revision --autogenerate -m "describe database change"
+alembic revision --autogenerate -m "describe database change"
 ```
 
 ## 4. Executer Les Migrations Alembic
@@ -163,7 +163,7 @@ alembic -c src/migrations/alembic.ini revision --autogenerate -m "describe datab
 Lancer :
 
 ```powershell
-alembic -c src/migrations/alembic.ini upgrade head
+alembic upgrade head
 ```
 
 Cette commande applique toutes les migrations de base de donnees, notamment :

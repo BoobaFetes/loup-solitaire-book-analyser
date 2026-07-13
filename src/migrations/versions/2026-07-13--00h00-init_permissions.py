@@ -1,16 +1,19 @@
 """init permissions
 
-Revision ID: 001
+Revision ID: 3551992da1e1
 Revises:
-Create Date: 2026-07-13
+Create Date: 2026-07-13 00:00:00
+
 """
+
+from typing import Sequence, Union
 
 from alembic import op
 
-revision = "001"
-down_revision = None
-branch_labels = None
-depends_on = None
+revision: str = "3551992da1e1"
+down_revision: Union[str, Sequence[str], None] = None
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:

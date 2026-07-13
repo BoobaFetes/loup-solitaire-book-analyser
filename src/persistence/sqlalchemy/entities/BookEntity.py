@@ -1,32 +1,39 @@
 from datetime import date
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, Date, Integer, String, Unicode
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from persistence.sqlalchemy.entities.EntityBase import EntityBase
 
-# attention pour terminer les relations entre entitées : from typing import List
-# attention pour terminer les relations entre entitées : from typing import Optional
-# attention pour terminer les relations entre entitées : from sqlalchemy import ForeignKey
-# attention pour terminer les relations entre entitées : from sqlalchemy import String
-# attention pour terminer les relations entre entitées : from sqlalchemy.orm import Mapped
-# attention pour terminer les relations entre entitées : from sqlalchemy.orm import mapped_column
-# attention pour terminer les relations entre entitées : from sqlalchemy.orm import relationship
+if TYPE_CHECKING:
+    from persistence.sqlalchemy.entities.BookAuthorEntity import BookAuthorEntity
+    from persistence.sqlalchemy.entities.BookPriceEntity import BookPriceEntity
 
 
 class BookEntity(EntityBase):
     __tablename__ = "book"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    isbn: Mapped[str] = mapped_column(String(13))
-    titre: Mapped[str] = mapped_column(Unicode(100))
-    url: Mapped[str] = mapped_column(String(200))
-    numero: Mapped[int] = mapped_column(Integer)
-    # en attente authors: Mapped[List[Author]] = relationship( cascade="all, delete-orphan"  )
-
-    lastParutionDate: Mapped[date] = mapped_column(Date)
-    description: Mapped[str] = mapped_column(Unicode(1000))
+    url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    isbn: Mapped[str] = mapped_column(String(13), unique=True, nullable=False)
+    numero: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    titre: Mapped[str] = mapped_column(Unicode(200), nullable=False, default="")
+    lastParutionDate: Mapped[date] = mapped_column(
+        "last_parution_date",
+        Date,
+        nullable=False,
+        default=date.min,
+    )
+    description: Mapped[str] = mapped_column(Unicode(4000), nullable=False, default="")
     official: Mapped[bool] = mapped_column(Boolean, default=False)
-    # en attente prices: list[BookPrice] = Field(default_factory=lambda: [])
-    # les images etant en base 64 mais lors de leur récupération on va leur donner un non, les stocker sur un volumes dédiés et le champs images sera juste la pour avoir le nom du fichier
-    image: Mapped[str] = mapped_column(Unicode(200), default="")
+    image: Mapped[str] = mapped_column(Unicode(500), nullable=False, default="")
+    acquired: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    authors: Mapped[list["BookAuthorEntity"]] = relationship(
+        back_populates="book",
+        cascade="all, delete-orphan",
+    )
+    prices: Mapped[list["BookPriceEntity"]] = relationship(
+        back_populates="book",
+        cascade="all, delete-orphan",
+    )
