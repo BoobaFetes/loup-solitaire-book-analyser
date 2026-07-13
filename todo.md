@@ -1,8 +1,6 @@
 # TODO LIST
 
 1. [EN COURS] changer l'infra pour acceuillir un postgres (bitnami/postgresql) (codesource et k8s avec networkpolicy)
-    1. passer au code pour implementer un simple appel à la base (main est dejà fait pour donc faut jsute que ca passe sans exception)
-    1. implementer alembic pour pouvoir effectuer les migrations (creation de la db)
     1. implementer l'unit of work des adapters sqlalchemy
     1. revoir les tests unitaires de l'ensemble de l'applications (sont compliquer .....)
     1. lancer les job pour verifier qu'en base tout est persisté et que le runtime est OK
