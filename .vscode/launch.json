@@ -42,17 +42,22 @@
       "cwd": "${fileDirname}"
     },
     {
-      "name": "launch alembic",
+      "name": "launch db init",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "program": "${workspaceFolder}/src/migrations/bootstrap_roles.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "launch alembic upgrade",
       "type": "debugpy",
       "request": "launch",
       "python": "${workspaceFolder}/.venv/Scripts/python.exe",
       "module": "alembic",
-      "args": [
-        "-c",
-        "${workspaceFolder}/src/migrations/alembic.ini",
-        "upgrade",
-        "head"
-      ],
+      "args": ["upgrade", "head"],
       "console": "integratedTerminal",
       "justMyCode": true,
       "envFile": "${workspaceFolder}/.env"
