@@ -1,11 +1,6 @@
 # TODO LIST
 
 1. [EN COURS] changer l'infra pour acceuillir un postgres (bitnami/postgresql) (codesource et k8s avec networkpolicy)
-    1. ouvrir la conversation du 10/07/2026 avec codex: Créer connexion base de données
-    1. demande à l'ia de verifi que la doc et le CI et CD soient cohérents - on ne veut pas de doc fausse
-    1. vérifier que la nouvelle stratégie fonctione au niveau infra
-        - kusto build
-        - connection à la base de données depuis dbeaver
     1. passer au code pour implementer un simple appel à la base (main est dejà fait pour donc faut jsute que ca passe sans exception)
     1. implementer alembic pour pouvoir effectuer les migrations (creation de la db)
     1. implementer l'unit of work des adapters sqlalchemy
