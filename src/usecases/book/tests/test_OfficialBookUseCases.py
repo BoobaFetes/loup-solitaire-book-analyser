@@ -61,3 +61,33 @@ def test_fetch_book_ignores_page_when_author_is_not_joe_dever():
     book = asyncio.run(use_cases.fetch_book(url))
 
     assert book is None
+
+
+def test_fetch_book_urls_warms_gallimard_catalogue_session_before_fragment():
+    fragment_url = f"{BASE_URL}/catalogue/fragment?page=1&text=loup%20solitaire"
+    referer = f"{BASE_URL}/catalogue.html?text=loup+solitaire"
+    client = FakeHttpClient(
+        text_by_endpoint={referer: "<html></html>"},
+        json_by_endpoint={fragment_url: {"html": "", "next-url": False}},
+    )
+    use_cases = OfficialBookUseCases(
+        BASE_URL,
+        client,
+        GallimardBookListFinder,
+        GallimardBookDetailsFinder,
+        GallimardPriceDetailsFinder,
+    )
+
+    urls = asyncio.run(use_cases._fetch_book_urls(client))
+    text_headers = client.text_requests[0][1]
+    json_headers = client.json_requests[0][1]
+
+    assert urls == []
+    assert client.cache_enabled is True
+    assert client.text_requests[0][0] == referer
+    assert text_headers is not None
+    assert text_headers["Sec-Fetch-Mode"] == "navigate"
+    assert client.json_requests[0][0] == fragment_url
+    assert json_headers is not None
+    assert json_headers["Referer"] == referer
+    assert json_headers["X-Requested-With"] == "XMLHttpRequest"

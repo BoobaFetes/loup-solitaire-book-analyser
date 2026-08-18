@@ -93,6 +93,36 @@ class FileSystemAdapter(IFileSystem):
             )
             raise
 
+    def read_bytes(self, name: str) -> bytes:
+        """Read the binary contents of a file.
+
+        Args:
+            name (str): The name of the file to read.
+
+        Raises:
+            FileNotFoundError: If the file is not found.
+            IOError: If there is an error reading the file.
+
+        Returns:
+            bytes: The binary contents of the file.
+        """
+        current_path: Path = Path(self._path / name)
+        try:
+            with open(current_path, "rb") as f:
+                return f.read()
+        except FileNotFoundError as e:
+            self._logger.critical(
+                f"File not found: {current_path}: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
+            raise
+        except IOError as e:
+            self._logger.critical(
+                f"Error reading file {current_path}: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
+            raise
+
     def write_file(self, name: str, content: str, encoding: str = "utf-8") -> None:
         """Write the contents to a file.
 
@@ -123,6 +153,40 @@ class FileSystemAdapter(IFileSystem):
 
             # action
             with open(current_path, "w", encoding="utf-8") as f:
+                f.write(content)
+        except FileNotFoundError as e:
+            self._logger.critical(
+                f"File not found: {current_path}: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
+            raise
+
+    def write_bytes(self, name: str, content: bytes) -> None:
+        """Write binary contents to a file.
+
+        Args:
+            name (str): The name of the file to write.
+            content (bytes): The binary contents to write.
+
+        Raises:
+            ValueError: If the file path is invalid.
+            FileNotFoundError: If the file is not found.
+            IOError: If there is an error writing to the file.
+            Exception: If there is any other error during the file writing process.
+        """
+        current_path: Path = Path(self._path / name)
+        try:
+            if current_path.suffix == "":
+                self._logger.error(
+                    f"Cannot write to file path: {current_path} because it seems to be an invalid file path."
+                )
+                raise ValueError(f"Invalid file path: {current_path}")
+
+            current_path.parent.mkdir(parents=True, exist_ok=True)
+            if current_path.exists():
+                current_path.unlink()
+
+            with open(current_path, "wb") as f:
                 f.write(content)
         except FileNotFoundError as e:
             self._logger.critical(

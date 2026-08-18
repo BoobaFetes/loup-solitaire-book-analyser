@@ -47,6 +47,7 @@ htmlcov/
 # apps repository (logs used in stg/prod too)
 logs/
 assets/**
+caches/
 
 # delivery process
 k8s/overlays/*-build.yaml

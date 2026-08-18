@@ -19,7 +19,7 @@ class BookDetailsFinderBase(DetailsHtmlFinderBase, ABC):
     async def _fetch_image(self, client: HttpClientBase, url: str) -> str:
         if not url:
             return ""
-        image_bytes = await client.get_content(url)
+        image_bytes = await client.get_image(url)
         return base64.b64encode(image_bytes).decode("utf-8")
 
     @abstractmethod

@@ -5,7 +5,6 @@ from collections.abc import Callable
 from domain import Book
 from ports.http import HttpClientBase
 from ports.usecase import BookDetailsFinderBase, BookListFinderBase
-from usecases.UnitTestCapture import UnitTestCapture
 
 
 class NonOfficialBookUseCases:
@@ -66,9 +65,7 @@ class NonOfficialBookUseCases:
     ) -> Book | None:
         book: Book | None = None
         try:
-            self.__logger.info(
-                f"get book details from : {url}",
-            )
+            self.__logger.info(f"get book details from : {url}")
 
             active_client = client or self.__client
             html = await active_client.get_text(url, "latin-1")
@@ -107,10 +104,6 @@ class NonOfficialBookUseCases:
                 image=image,
                 prices=[],
                 official=False,
-            )
-            UnitTestCapture.capture(
-                f"src/usecases/book/tests/dataset/biblio_aventurier_{book.isbn}.html",
-                html,
             )
         except Exception as e:
             self.__logger.error(

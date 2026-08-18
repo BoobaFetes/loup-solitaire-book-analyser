@@ -115,20 +115,20 @@ def main():
     load_dotenv()
 
     log_file = root_path / "logs" / "test.log"
-    assets_file = root_path / "assets" / "assets.png"
+    captures_file = root_path / "captures" / "captures.png"
 
     pprint("le pod est lancé !")
 
     pprint("tentative d'ecriture dans les volumes montés...")
     with open(log_file, "w") as f:
         f.write("test d'écriture dans le volume monté: logs/test.log")
-    with open(assets_file, "w") as f:
-        f.write("test d'écriture dans le volume monté: assets/assets.png")
+    with open(captures_file, "w") as f:
+        f.write("test d'écriture dans le volume monté: captures/captures.png")
     pprint("écriture terminée !")
 
     pprint("suppression des fichiers de test...")
     log_file.unlink()
-    assets_file.unlink()
+    captures_file.unlink()
     pprint("fichiers de test supprimés !")
 
     write_data_with_batch_user(shouldClean=False)

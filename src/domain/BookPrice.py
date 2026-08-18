@@ -1,7 +1,9 @@
 from datetime import date as Date
 from datetime import datetime, timezone
+from dataclasses import dataclass
 
 
+@dataclass
 class BookPrice:
     """Represents the price of a book.
 
@@ -14,10 +16,10 @@ class BookPrice:
 
     isbn: str
     source: str
-    date: Date = datetime.now(timezone.utc).date()
     price: float
     url: str
     currency: str
+    date: Date = datetime.now(timezone.utc).date()
 
     def __str__(self) -> str:
         return f"[date: {self.date}] [source: {self.source:<30}] [ISBN: {self.isbn:>13}] {self.price:>3} {self.currency} [url: {self.url}]"

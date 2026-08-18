@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 
 from domain.BookPrice import BookPrice
@@ -37,11 +37,11 @@ class Book:
     isbn: str = ""
     numero: int = 0
     titre: str = ""
-    authors: list[str] = []
-    lastParutionDate: date = date.min
+    authors: list[str] = field(default_factory=list)
+    lastParutionDate: date | str = date.min
     description: str = ""
     official: bool = False
-    prices: list[BookPrice] = []
+    prices: list[BookPrice] = field(default_factory=list)
     image: str = ""
     acquired: bool = False
 
