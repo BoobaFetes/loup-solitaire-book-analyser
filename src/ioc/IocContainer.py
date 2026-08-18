@@ -7,7 +7,8 @@ from typing import TypeVar, cast
 from dependency_injector import containers, providers
 
 from adapters.browser import BrowserAdapter, PageHandlerAdapter
-from adapters.database import tinydb
+from adapters.cache import InMemoryCacheAdapter
+from adapters.database import sqlalchemy
 from adapters.http import HttpClientAdapter
 from adapters.os import FileSystemAdapter
 from adapters.usecase import amazon, biblio_aventurier, gallimard
@@ -32,6 +33,10 @@ def _make_logging_handlers(root_dir: str, log_file: str) -> list[Handler]:
         # garde aussi les logs console pour faciliter le développement et le debug ou voir directement dans k8s
         StreamHandler(),
     ]
+
+
+def _root_dir_or_current_working_directory(root_dir: str | None) -> str:
+    return root_dir or os.getcwd()
 
 
 websites = {
@@ -76,6 +81,21 @@ class IocContainer(containers.DeclarativeContainer):
 
     # endregion
 
+    # region os adapters
+
+    file_system = providers.Singleton(
+        FileSystemAdapter,
+        path=providers.Callable(_root_dir_or_current_working_directory, config.root_dir),
+    )
+
+    inmemory_cache = providers.Singleton(
+        InMemoryCacheAdapter,
+        fs=file_system,
+        enabled=config.inmemory_cache_enabled,
+    )
+
+    # endregion
+
     # region browser adapters
 
     browser = providers.Singleton(
@@ -106,24 +126,26 @@ class IocContainer(containers.DeclarativeContainer):
 
     http_client = providers.Factory(
         HttpClientAdapter,
+        inmemory_cache=inmemory_cache,
         retry_delay=config.api_timeout,
-        headers=providers.Dict({"User-Agent": config.browser_user_agent}),
-    )
-
-    # endregion
-
-    # region os adapters
-
-    file_system = providers.Singleton(
-        FileSystemAdapter,
-        path=config.root_dir,
+        headers=providers.Dict(
+            {
+                "User-Agent": config.browser_user_agent,
+                "Accept": (
+                    "text/html,application/xhtml+xml,application/xml;q=0.9,"
+                    "image/avif,image/webp,*/*;q=0.8"
+                ),
+                "Accept-Language": config.browser_accept_language,
+            }
+        ),
+        follow_redirects=True,
     )
 
     # endregion
 
     # region database adapters
 
-    unit_of_work = tinydb.make_unit_of_work(config=config)
+    unit_of_work = sqlalchemy.make_unit_of_work(config=config)
 
     # endregion
 
@@ -177,6 +199,7 @@ class IocContainer(containers.DeclarativeContainer):
         client=http_client,
         official_book=official_book_usecases,
         non_official_book=non_official_book_usecases,
+        fs=file_system,
     )
 
     book_price_usecases = providers.Singleton(
@@ -244,8 +267,20 @@ def new_ioc_container(script_name: str) -> IocContainer:
 
     # bind configuration values
     container.config.root_dir.from_env("ROOT_DIR", default=os.getcwd())
-    container.config.connection_string.from_env("CONNECTION_STRING", required=True)
+    container.config.connection_string_batch.from_env(
+        "CONNECTION_STRING_BATCH", required=True
+    )
+    container.config.connection_string_webapp.from_env(
+        "CONNECTION_STRING_WEBAPP", required=True
+    )
     container.config.log_level.from_env("LOG_LEVEL", default="INFO")
+
+    convert_env_variables_as(
+        wanted_type=bool,
+        config=container.config.inmemory_cache_enabled,
+        name="INMEMORY_CACHE_ENABLED",
+        default=True,
+    )
 
     convert_env_variables_as(
         wanted_type=bool,
@@ -330,7 +365,9 @@ def print_environment_variables(container: IocContainer, logger: Logger):
         ("ROOT_DIR", container.config.root_dir()),
         ("API_TIMEOUT", container.config.api_timeout()),
         ("API_PARALLEL_CALLS", container.config.api_parallel_calls()),
-        ("CONNECTION_STRING", container.config.connection_string()),
+        ("CONNECTION_STRING_BATCH", container.config.connection_string_batch()),
+        ("CONNECTION_STRING_WEBAPP", container.config.connection_string_webapp()),
+        ("INMEMORY_CACHE_ENABLED", container.config.inmemory_cache_enabled()),
         ("LOG_LEVEL", container.config.log_level()),
         ("LOG_FILE", container.config.log_file()),
         ("HEADLESS", container.config.headless()),

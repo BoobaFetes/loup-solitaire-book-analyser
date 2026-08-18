@@ -64,7 +64,16 @@ def test_http_client_headers_resolve_configuration_options():
     container = IocContainer()
     container.config.api_timeout.from_value(0.5)
     container.config.browser_user_agent.from_value("Mozilla/5.0 test")
+    container.config.browser_accept_language.from_value("fr-FR")
 
     client = container.http_client()
 
-    assert client.client_options["headers"] == {"User-Agent": "Mozilla/5.0 test"}
+    assert client.client_options["headers"] == {
+        "User-Agent": "Mozilla/5.0 test",
+        "Accept": (
+            "text/html,application/xhtml+xml,application/xml;q=0.9,"
+            "image/avif,image/webp,*/*;q=0.8"
+        ),
+        "Accept-Language": "fr-FR",
+    }
+    assert client.client_options["follow_redirects"] is True

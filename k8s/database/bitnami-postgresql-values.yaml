@@ -1,0 +1,106 @@
+global:
+  postgresql:
+    auth:
+      # Use existing secret instead of generating password
+      existingSecret: "lsba-secret-postgresql-credentials"
+      secretKeys:
+        adminPasswordKey: "postgres_pwd_key" # should be updated by the CD pipeline to a strong password 
+        userPasswordKey: "db_migration_usr_pwd_key" # should be updated by the CD pipeline to a strong password 
+        replicationPasswordKey: "db_replication_usr_pwd_key" # should be updated by the CD pipeline to a strong password, not used yet but required by the Bitnami chart
+
+auth:
+  # Maintenance user and database created by Bitnami at first startup.
+  database: "lsba_db"
+  username: "db_migration_usr"
+
+postgresqlDataDir: /app/postgresql/data
+primary:  
+  # Persistent storage
+  persistence:
+    enabled: true
+    existingClaim: "lsba-pvc-dev"
+    size: 10Mi
+    # Access mode
+    accessModes:
+      - ReadWriteMany # un seule PV pour tous les pods mais permissions distincte entre les pods
+    mountPath: /app/postgresql
+    subPath: postgresql
+  
+  # Security context  
+  podSecurityContext:
+    enabled: true
+    fsGroup: 4002
+  containerSecurityContext:
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 4000
+    runAsGroup: 4002
+    privileged: false
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: "RuntimeDefault"
+
+  # Resource allocation
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 1Gi
+      cpu: 2000m
+
+  # Network policy
+  networkPolicy:
+    enabled: true
+    allowExternal: false
+    ingressNSMatchLabels:
+      postgres-access: "true"
+
+  # Pod disruption budget
+  pdb:
+    create: true
+    minAvailable: 1 # always keep at least 1 pod available
+
+  # Liveness and readiness probes
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  
+  # Initialization notes only. Application roles and passwords are managed by a
+  # repeatable post-infra operation, not by PostgreSQL first-boot scripts.
+  initdb:
+    scripts:
+      00-lsba-bootstrap-notes.sql: |
+        -- LSBA database bootstrap notes.
+        --
+        -- The Bitnami chart creates the maintenance database and user:
+        --   - database: lsba_db
+        --   - migration user: db_migration_usr
+        --
+        -- Application login roles are intentionally not created here.
+        -- They must be managed by a repeatable operational step because:
+        --   - credentials may need rotation after the database is initialized;
+        --   - initdb scripts only run once on an empty data directory;
+        --   - staging and production must source credentials from secret management;
+        --   - Alembic migrations should own schema changes and object permissions.
+        --
+        -- Expected future application login roles:
+        --   - db_batch_usr: batch jobs, write access through controlled grants;
+        --   - db_webapp_usr: web application, limited read/write access;
+        --   - db_analytics_usr: read-only reporting access if analytics is introduced.
+        --
+        -- A future maintenance job should create/update these roles and rotate
+        -- their passwords before application workloads are rolled out.

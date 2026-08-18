@@ -3,7 +3,7 @@ from ports.database import IDbContext
 
 class FakeDbContext(IDbContext):
     def __init__(self) -> None:
-        self.calls: list[tuple[str, str | None]] = []
+        self.calls: list[tuple[str, None]] = []
 
     async def __aenter__(self) -> IDbContext:
         await self.start()
@@ -18,8 +18,8 @@ class FakeDbContext(IDbContext):
     async def stop(self):
         self.calls.append(("stop", None))
 
-    async def begin_transaction(self, transaction_name: str):
-        self.calls.append(("begin", transaction_name))
+    async def begin_transaction(self):
+        self.calls.append(("begin", None))
 
     async def commit_transaction(self):
         self.calls.append(("commit", None))

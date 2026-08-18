@@ -1,0 +1,331 @@
+# Project Documentation
+
+## Installation (local development only)
+
+1. Clone the repository:
+
+   ```bash
+   git clone <repository-url>
+   cd loup-solitaire-book-analyser
+   ```
+
+2. Create a virtual environment (.venv):
+
+   ```bash
+   py -m venv .venv  
+   ```
+
+3. Activate the virtual environment:
+
+   - On Windows:
+
+     ```bash
+     ./.venv/Scripts/activate
+     ```
+
+   - On Unix or MacOS:
+
+     ```bash
+     source .venv/bin/activate
+     ```
+
+   - Remember: to deactivate the virtual environment, simply run:
+
+     ```bash
+     (.venv) PS > deactivate
+     ```
+
+4. Install the required Python packages:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+5. Using Playwright, we have to install the browser that will be used:
+
+   ```bash
+   playwright install chromium
+   ```
+  
+6. Install desktop-docker and launch it.
+
+7. Execute the following command to setup your local machine:
+
+   ```bash
+   & ./scripts/reload-infra.ps1
+   ```
+
+   > the scipt will create the local configuration on k8s, create linux folders for volumes and their permissions
+   > **But you have to create a desktop-docker instance first !**
+   > script arguments are:
+   > - `-clean` : delete the local configuration from you local desktop-docker instance (volumes, linux permissions)
+
+8. Build the manifest files on your local cluster (desktop-docker or minikube):
+
+   ```bash
+    kustomize build ./k8s/overlays/dev/ --enable-helm | kubectl apply -f -
+   ```
+
+9. don't forget to serve the local database on your local machine if you want to connect to it from your local machine when developping the application.
+
+   ```bash
+   & ./scripts/serve-local-database.ps1
+   ```
+
+---
+
+## Running the Application
+
+### for CI/CD
+
+We assume that we always use the last version of python (last stable version) in the CI/CD pipelines without ignoring security concerns.
+
+So, Team should check the Dockerfile to see which version of python is used, and be sure to use the last stable version with lesser security issue as possible.
+
+### for development
+
+To run the application locally, there is two ways.
+
+First, using vscode, press F5 and the IDE will execute pyright to validate source code before runing the application.
+
+Otherwise, you can execute the following command once the virtual environment is activated: (be advised that pyright will not be executed in this case, so you may want to run it manually before executing the application)
+
+```bash
+(.venv) PS > /.venv/Scripts/pyright.exe ./src/main.py
+(.venv) PS > python src/main.py
+```
+
+Don't forget to post-forward the port 5432 for the database if you want to connect to it from your local machine when developping the application.
+
+You can use the following command to post-forward the database on your local machine:
+`./scripts/serve-local-database.ps1`
+
+---
+
+## Delivery
+
+We use Kubernetes to run the application.
+
+- `dev` runs on a local cluster such as Docker Desktop or Minikube.
+- `stg` and `prod` are intended to run on a managed cloud Kubernetes cluster such as AWS or Azure.
+
+For local hosting reasons, the `dev` overlay owns the local storage implementation:
+
+- `k8s/overlays/dev/lsba-pv.yaml` defines a `PersistentVolume` backed by `hostPath`;
+- `k8s/overlays/dev/patch-lsba-sc.yaml` patches the `StorageClass` provisioner to `kubernetes.io/no-provisioner`.
+
+The cloud storage configuration for `stg` and `prod` is not finalized yet and must be completed when the cloud provider and CSI driver are selected.
+
+### Database Delivery Workflow
+
+PostgreSQL is defined in `k8s/database`, a Kustomize base package wrapping the Bitnami Helm chart. Environment overlays include this package when they need to deploy the database, then add their own storage, credentials and patches.
+
+The intended workflow is:
+
+#### CI
+
+- Validate Python code with type checking, linting and tests.
+- Build the Docker image with `push: false`.
+- This build only proves that an image can be produced. The image is not published by CI because delivery is explicit: we publish an artifact only when a selected feature set or version is ready to be delivered.
+
+#### CD
+
+1. **Delivers infra: Kustomize / Helm**
+   - Build and apply the Kubernetes manifests.
+   - The Bitnami chart starts PostgreSQL.
+   - The chart creates `lsba_db`.
+   - The chart creates the maintenance login role `db_migration_usr`.
+
+2. **Delivers source code**
+   - Build and publish the Docker image used by Kubernetes workloads.
+   - Create or update the PostgreSQL Kubernetes Secret from GitHub Environment secrets.
+   - Handles password rotation for `stg` and `prod` environments.
+     > For now, password rotation means updating GitHub Environment secrets manually and rerunning the CD workflow.
+     > We are considering a CronJob to automatically rotate `stg` and `prod` passwords later.
+
+3. **Runs database migrations with Alembic**
+   - Run migrations with `db_migration_usr`.
+   - Create and update tables, constraints, indexes and object-level grants.
+
+Application login roles such as `db_batch_usr` and `db_webapp_usr` are not created by Bitnami `initdb` scripts. Their creation is still to be defined, but they must exist before Alembic grants permissions to them.
+
+`.github/workflows/cd.yml` is a disabled draft documenting this future `stg`/`prod` delivery shape.
+
+### Features validation by the Team (on local development)
+
+We choose to follow a specific process with git to track every move on the kubernetes clusters.
+
+So we are using manifest files and versioning them.
+
+It is the reason why the team have to follow theses step for delivery:
+
+#### 1. versionning
+
+1. create new branch named `deliver/vX.Y.Z` based on the `main` branch (see bellow for how to version your delivery)
+
+#### 2. setup local infrastructure
+
+1. reload your local infrastructure with :
+
+   ```bash
+   & ./scripts/reload-infra.ps1
+   ```
+
+1. change the manifests (check if your needs are well reflected in manifest files)
+1. delete cronjobs and local dev jobs (if you perform an update other than the image)
+
+    ```bash
+    k delete  -f ./k8s/overlays/dev-build.yaml;`
+    ```
+
+1. execute kubernetize project for your dev environment only (stg and prod are handled by CI/CD pipelines):
+
+    ```bash
+    kustomize build ./k8s/overlays/dev/ --enable-helm > ./k8s/overlays/dev-build.yaml; k apply -f ./k8s/overlays/dev-build.yaml;
+    ```
+
+#### 3. validate the delivery
+
+1. Check the local dev jobs are working and processed as expected
+1. Check the cronjob is working after the next scheduled time
+    > if local dev jobs are working well, the cronjob have to work well too
+    >
+    > don't forget to check if jobs and cronjob are in sync together (same image, same command, same env vars, same configmaps, same secrets, same volumes, etc...)
+    >
+    > but it is better to check it after the next scheduled time when an update has been made by one of the source of our data to check if their change is stable
+1. Check the database is well updated:
+    - get the password :
+
+      ```bash
+      k get secret lsba-secret-postgresql-credentials-dev -o yaml
+      ```
+
+    - decode it :
+
+      ```bash
+      docker exec -it desktop-worker sh -c 'echo "<the password in base 64>" | base64 -d'
+      ```
+
+    - copy the password and connect to the database with the following command:
+
+      ```bash
+      kubectl exec -it -n lsba-ns-dev lsba-db-postgresql-dev-0 -- psql -U db_migration_usr -d lsba_db
+      ```
+
+    - in psql, use comands :
+         1. `\du`: to list users
+         1. `\l` : to list databases
+         1. `\c <database_name>` : to connect to a database
+         1. `\dt` : to list tables in the current database
+
+#### 4. commit after validation
+
+1. commit your changes on the new branch `deliver/vX.Y.Z`
+1. Push to git origin the new branch `deliver/vX.Y.Z`
+1. Ask for a Pull Request.
+
+#### 5. delivery on stg and prod
+
+1. once the PR is validated, merge it on the `main` branch
+1. trigger the CD GitHub Action with `env_target=stg`.
+1. validate the delivery on stg by executing the applications (for cronjobs waits expected time, for web apps launch it)
+1. trigger the CD GitHub Action with `env_target=prod`.
+   > delivery strategy is not defined yet
+   >
+   > so no canary or blue/green strategy is available
+   >
+   > only a rollback of the k8s rolling update feature is possible for now. So, be sure to validate the delivery on stg before delivering on prod.
+
+   *NOTE: L'idéal serait un CD qui prendrait l'artefact de stg et le pousserait sur l'env de prod.... comme un workflow de validation qui empeche toute transgression de ce process de livraison....*
+
+This **process is important** to be sure that the manifest files are in sync with the application, and to be sure that the application is **well delivered** on kubernetes cluster **at any time and from scratch**
+
+> NEVER COMMITS the built manifest files (e.g. `./k8s/overlays/dev-build.yaml`), they are generated by the kubernetize project and should be ignored by git.
+
+### CI/CD processs (deprecated)
+
+**MUST BE REVIEWED, CI/CD pipelines will comes in a couple of days**
+
+Please, follow these steps to deliver the application:
+
+1. Build the Docker image:
+
+   ```
+   docker build -t loup-solitaire-book-analyser:vX.Y.Z .
+   ```
+
+   > Note:
+   > version should be replaced with the actual version number of the application:
+   > - X: Major version: Incremented for significant changes that may include breaking changes.
+   > - Y: Minor version: Incremented for new features that are backward compatible.
+   > - Z: Patch version: Incremented for bug fixes and minor improvements that are backward compatible.
+   >
+   > **Major version set to 0 means that the application is in development and may have breaking changes at any time, and should not be used in production**
+
+2. deliver on kubernetes:
+
+   ```bash
+   kubectl apply -k k8s/overlays/dev
+   ```
+
+3. update cronjob and local dev jobs:
+
+   > the kubernetize project set the namespace, so be advise to look after it before executing commands to delete cronjob and local dev jobs.
+
+   - **3.1 local environment**
+
+   ```bash
+   
+   # remove cronjob and local dev job because we can't restart them with "k rollout restart xxx/yyy" command
+   k -n <namespace> delete cronjob loup-solitaire-book-analyser-cronjob
+   k -n <namespace> delete job loup-solitaire-book-analyser-job
+   ```
+
+   Standalone Job resources are only present in the `dev` overlay. `stg` and `prod` deploy CronJobs only.
+
+   SO, in `dev`, you must **delete the cronjob and local dev job** before execute the apply command when needed.
+
+   Don't worry, the job is only executed once to be sure the application is well set up, even if it initialize data.
+   <br/>
+
+   - **3.2 local environment and CI/CD**
+
+   To deliver more quickly, you can update the image (both cronjobs and jobs) but you have to keep in mind to sync manifest files with your changes.
+
+   In CD pipelines, we will use this way to update the application, **so it is important to be sure that the manifest files are in sync with the application**.
+
+   ```bash
+   k -n <namespace> set image cronjob/dev-loup-solitaire-book-analyser-cronjob loup-solitaire-book-analyser=loup-solitaire-book-analyser:vX.Y.Z
+   k -n <namespace> set image job/dev-loup-solitaire-book-analyser-job loup-solitaire-book-analyser=loup-solitaire-book-analyser:vX.Y.Z
+   ```
+
+## File system
+
+Kubernetes security settings and volume permissions are documented in [security.md](security.md).
+
+> we use '4' as prefix for user and group to avoid conflict with other projects (if they exists).
+> We have choose 4 because the alias of the project `lsba` has 4 characters.
+
+### Users and Groups
+
+see the security model in [security.md](security.md#user-and-group-ids) for more details.
+
+### Repositories
+
+On a local cluster, the `dev` overlay uses a `hostPath` volume at `/mnt/lsba/dev`. The local worker node must have matching directories and permissions so the application can read and write data and logs.
+
+The local setup script prepares only the `dev` directories. `stg` and `prod` storage must be managed by the selected cloud storage provider.
+
+| directory (env) | sub directory | group name | users |
+| --- | --- | --- | --- |
+| /mnt/lsba/dev/ | logs/ | **lsba-dev-app** | lsba-dev-batch-usr, lsba-dev-app-usr |
+| /mnt/lsba/dev/ | assets/ | **lsba-dev-app** | lsba-dev-batch-usr, lsba-dev-app-usr |
+| /mnt/lsba/dev/ | postgresql/ | **lsba-dev-data** | lsba-dev-data-usr |
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request for any enhancements or bug fixes.
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for details.

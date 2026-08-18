@@ -3,6 +3,7 @@ import asyncio
 from domain import Book
 from adapters.database.tests.fake import FakeUnitOfWork
 from adapters.http.tests.fake import FakeHttpClient
+from adapters.os.tests.fake_file_system import FakeFileSystem
 from usecases.BookListUseCases import BookListUseCases
 from usecases.book.tests.fake import FakeNonOfficialBookUseCases, FakeOfficialBookUseCases
 
@@ -14,6 +15,7 @@ def make_book(
     *,
     official: bool,
     url: str = "",
+    image_url: str = "",
 ) -> Book:
     return Book(
         id=numero,
@@ -23,6 +25,8 @@ def make_book(
         titre=titre,
         authors=["Joe Dever"],
         official=official,
+        imageSourceUrl=image_url or f"https://images.test/{isbn}.jpg",
+        imageContent=f"image-{numero}-{official}".encode("utf-8"),
     )
 
 
@@ -42,11 +46,13 @@ def test_fetch_books_merges_sources_fixes_first_title_sorts_and_persists():
         ),
     ]
     unit_of_work = FakeUnitOfWork()
+    fs = FakeFileSystem()
     use_cases = BookListUseCases(
         unit_of_work,
         FakeHttpClient(),
         FakeOfficialBookUseCases(official_books),
         FakeNonOfficialBookUseCases(non_official_books),
+        fs,
     )
 
     books = asyncio.run(use_cases.fetch_books())
@@ -55,4 +61,7 @@ def test_fetch_books_merges_sources_fixes_first_title_sorts_and_persists():
     assert books[0].titre == "Les Maîtres des Ténèbres"
     assert books[-1].isbn == "2070519031"
     assert books[-1].official is False
+    assert all(book.image.startswith("assets/book-covers/") for book in books)
+    assert all(book.imageContent == b"" for book in books)
+    assert len(fs.files) == 3
     assert unit_of_work.book_repository.upserted_items == books

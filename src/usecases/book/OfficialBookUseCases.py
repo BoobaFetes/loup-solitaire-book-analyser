@@ -2,6 +2,7 @@ import asyncio
 import logging
 from collections.abc import Callable
 from typing import Literal
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from domain import Book, BookPrice
 from ports.http import HttpClientBase
@@ -10,7 +11,6 @@ from ports.usecase import (
     BookListFinderBase,
     PriceDetailsFinderBase,
 )
-from usecases.UnitTestCapture import UnitTestCapture
 
 
 class OfficialBookUseCases:
@@ -70,7 +70,12 @@ class OfficialBookUseCases:
         while segment:
             # fetch page content
             url = f"{self.__base_url}{segment}"
-            json = await client.get_json(url)
+            referer = self.__get_catalogue_referer(url)
+            await self.__warm_catalogue_session(client, referer)
+            json = await client.get_json(
+                url,
+                headers=self.__get_catalogue_fragment_headers(referer),
+            )
             if not json:
                 self.__logger.warning(f"No JSON content retrieved for book URL {url}")
                 return []
@@ -89,6 +94,52 @@ class OfficialBookUseCases:
         return result
 
     # endregion
+
+    async def __warm_catalogue_session(
+        self, client: HttpClientBase, referer: str
+    ) -> None:
+        """Open the Gallimard catalogue page before calling its fragment API.
+
+        Gallimard rejects direct calls to /catalogue/fragment when the request
+        does not have the cookies created by a previous catalogue page load.
+        """
+        previous_cache_state = client.enable_cache(False)
+        try:
+            await client.get_text(
+                referer,
+                headers={
+                    "Accept": (
+                        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+                        "image/avif,image/webp,*/*;q=0.8"
+                    ),
+                    "Sec-Fetch-Dest": "document",
+                    "Sec-Fetch-Mode": "navigate",
+                    "Sec-Fetch-Site": "none",
+                    "Sec-Fetch-User": "?1",
+                },
+            )
+        finally:
+            client.enable_cache(previous_cache_state)
+
+    def __get_catalogue_referer(self, fragment_url: str) -> str:
+        """Build the catalogue page URL matching a Gallimard fragment URL."""
+        parsed = urlparse(fragment_url)
+        query = parse_qs(parsed.query)
+        text = query.get("text", [""])[0]
+        referer_query = urlencode({"text": text}) if text else ""
+        return f"{parsed.scheme}://{parsed.netloc}/catalogue.html?{referer_query}"
+
+    def __get_catalogue_fragment_headers(self, referer: str) -> dict[str, str]:
+        """Return headers expected by Gallimard for catalogue AJAX fragments."""
+        return {
+            "Accept": "application/json, text/javascript, */*; q=0.01",
+            "Referer": referer,
+            "X-Requested-With": "XMLHttpRequest",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
+        }
+
     async def fetch_book(
         self, url: str, client: HttpClientBase | None = None
     ) -> Book | None:
@@ -132,6 +183,8 @@ class OfficialBookUseCases:
                 else []
             )
 
+            image_url, image_content = await details.image(active_client)
+
             book = Book(
                 id=id,
                 url=url,
@@ -141,13 +194,11 @@ class OfficialBookUseCases:
                 lastParutionDate=details.lastParutionDate("1900-01-01"),
                 description=details.description(""),
                 isbn=isbn,
-                image=await details.image(active_client),
+                image="",
+                imageSourceUrl=image_url,
+                imageContent=image_content,
                 prices=prices,
                 official=True,
-            )
-            UnitTestCapture.capture(
-                f"src/usecases/book/tests/dataset/gallimard_{book.isbn}.html",
-                html,
             )
         except Exception as e:
             self.__logger.error(

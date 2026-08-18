@@ -1,17 +1,23 @@
 import asyncio
+import json
 import logging
 from typing import TypeVar, cast
 
 import httpx
 
 from adapters.http.HttpxLogHandler import HttpxLogHandler
+from ports.cache import InMemoryCacheInterface
 from ports.http import HttpClientBase
 
 TJsonResponse = TypeVar("TJsonResponse")
 
 
 class HttpClientAdapter(HttpClientBase[TJsonResponse]):
-    def __init__(self, retry_delay: float = 1.0, **kwargs):
+    def __init__(
+        self, inmemory_cache: InMemoryCacheInterface, retry_delay: float = 1.0, **kwargs
+    ):
+        self.__inmemory_cache = inmemory_cache
+        self.__cache_enabled = self.__inmemory_cache.is_enabled()
         self.__retry_delay = retry_delay
         self.client_options = kwargs
         self.__client: httpx.AsyncClient | None = None
@@ -37,18 +43,25 @@ class HttpClientAdapter(HttpClientBase[TJsonResponse]):
         self.__client = None
         self.__logger.info("HTTP async client closed")
 
+    def enable_cache(self, enabled: bool = True) -> bool:
+        previous_value = self.__cache_enabled
+        self.__cache_enabled = enabled and self.__inmemory_cache.is_enabled()
+        return previous_value
+
     # endregion
 
     # region HTTP GET methods
 
     # region private methods managing response errors and retry
-    async def __get(self, endpoint: str, retry: int) -> httpx.Response:
+    async def __get(
+        self, endpoint: str, retry: int, headers: dict[str, str] | None = None
+    ) -> httpx.Response:
         response: httpx.Response = cast(httpx.Response, None)
         try:
             if not self.__client or self.__client.is_closed:
                 raise RuntimeError("HTTP client is not open")
 
-            response = await self.__client.get(endpoint)
+            response = await self.__client.get(endpoint, headers=headers)
             response.raise_for_status()
             return response
         except RuntimeError as e:
@@ -59,7 +72,7 @@ class HttpClientAdapter(HttpClientBase[TJsonResponse]):
             raise
         except httpx.ConnectTimeout as e:
             if retry > 0:
-                return await self._retry(endpoint, retry - 1)
+                return await self._retry(endpoint, retry - 1, headers=headers)
 
             self.__logger.critical(
                 f"Connection timeout for {response.url}: {type(e).__name__}: {e}",
@@ -68,7 +81,7 @@ class HttpClientAdapter(HttpClientBase[TJsonResponse]):
             raise
         except httpx.ConnectError as e:
             if retry > 0:
-                return await self._retry(endpoint, retry - 1)
+                return await self._retry(endpoint, retry - 1, headers=headers)
 
             self.__logger.critical(
                 f"Connection error for {response.url}: {type(e).__name__}: {e}",
@@ -77,7 +90,7 @@ class HttpClientAdapter(HttpClientBase[TJsonResponse]):
             raise
         except httpx.ReadTimeout as e:
             if retry > 0:
-                return await self._retry(endpoint, retry - 1)
+                return await self._retry(endpoint, retry - 1, headers=headers)
 
             self.__logger.critical(
                 f"Read timeout for {response.url}: {type(e).__name__}: {e}",
@@ -86,7 +99,7 @@ class HttpClientAdapter(HttpClientBase[TJsonResponse]):
             raise
         except httpx.ReadError as e:
             if retry > 0:
-                return await self._retry(endpoint, retry - 1)
+                return await self._retry(endpoint, retry - 1, headers=headers)
 
             self.__logger.critical(
                 f"Read error for {response.url}: {type(e).__name__}: {e}",
@@ -112,25 +125,72 @@ class HttpClientAdapter(HttpClientBase[TJsonResponse]):
             )
             raise
 
-    async def _retry(self, endpoint: str, retry: int) -> httpx.Response:
+    async def _retry(
+        self, endpoint: str, retry: int, headers: dict[str, str] | None = None
+    ) -> httpx.Response:
         self.__logger.warning(
             f"Retrying to fetch after {self.__retry_delay} seconds - retry left: {retry} - URL: {endpoint}",
         )
         await asyncio.sleep(self.__retry_delay)
-        return await self.__get(endpoint, retry)
+        return await self.__get(endpoint, retry, headers=headers)
 
-    async def get_json(self, endpoint: str, retry: int = 3) -> dict[str, TJsonResponse]:
-        result = await self.__get(endpoint, retry)
-        return result.json()
+    # endregion
+
+    async def get_json(
+        self,
+        endpoint: str,
+        retry: int = 3,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, TJsonResponse]:
+        if self.__cache_enabled:
+            content = self.__inmemory_cache.get(endpoint)
+            if content:
+                try:
+                    return json.loads(cast(str, content))
+                except json.JSONDecodeError:
+                    self.__logger.warning(
+                        f"Ignoring invalid cached JSON for {endpoint}"
+                    )
+
+        response = await self.__get(endpoint, retry, headers=headers)
+        result = response.json()
+
+        if self.__cache_enabled:
+            self.__inmemory_cache.set_background(endpoint, json.dumps(result))
+
+        return result
 
     async def get_text(
-        self, endpoint: str, encoding: str | None = None, retry: int = 3
+        self,
+        endpoint: str,
+        encoding: str | None = None,
+        retry: int = 3,
+        headers: dict[str, str] | None = None,
     ) -> str:
-        result = await self.__get(endpoint, retry)
-        return result.text if not encoding else result.content.decode(encoding)
+        if self.__cache_enabled:
+            content = self.__inmemory_cache.get(endpoint)
+            if content:
+                return cast(str, content)
 
-    async def get_content(self, endpoint: str, retry: int = 3) -> bytes:
-        result = await self.__get(endpoint, retry)
-        return result.content
+        response = await self.__get(endpoint, retry, headers=headers)
+        result = response.text if not encoding else response.content.decode(encoding)
+
+        if self.__cache_enabled:
+            self.__inmemory_cache.set_background(
+                endpoint,
+                result,
+                encoding=encoding if encoding else "utf-8",
+            )
+
+        return result
+
+    async def get_image(
+        self,
+        endpoint: str,
+        retry: int = 3,
+        headers: dict[str, str] | None = None,
+    ) -> bytes:
+        response = await self.__get(endpoint, retry, headers=headers)
+        return response.content
 
     # endregion

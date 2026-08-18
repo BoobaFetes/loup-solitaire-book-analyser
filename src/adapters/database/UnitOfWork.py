@@ -25,8 +25,8 @@ class UnitOfWork(IUnitOfWork):
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
         await self.context.stop()
 
-    async def begin_transaction(self, transaction_name: str) -> None:
-        await self.context.begin_transaction(transaction_name)
+    async def begin_transaction(self) -> None:
+        await self.context.begin_transaction()
 
     async def commit_transaction(self) -> None:
         await self.context.commit_transaction()

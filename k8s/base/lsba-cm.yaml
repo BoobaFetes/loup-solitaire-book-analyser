@@ -8,7 +8,8 @@ data:
   # not necessary -> ROOT_DIR: /app
   API_TIMEOUT: "1.0"
   API_PARALLEL_CALLS: "2"
-  CONNECTION_STRING: data/
+  # connection string for the batch database, to be stored in a secret for security reasons
+  CONNECTION_STRING_BATCH: "postgresql+psycopg://db_batch_usr:db_batch_usr_pwd@localhost:5432/lsba_db"
   LOG_FILE: logs/app.log
   LOG_LEVEL: INFO
   HEADLESS: "true"

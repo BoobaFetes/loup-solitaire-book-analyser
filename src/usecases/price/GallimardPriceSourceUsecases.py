@@ -5,7 +5,6 @@ from domain import Book, BookPrice
 from ports.http import HttpClientBase
 from ports.usecase import PriceDetailsFinderBase
 from usecases.price.PriceSourceUsecasesBase import PriceSourceUsecasesBase
-from usecases.UnitTestCapture import UnitTestCapture
 
 
 class GallimardPriceSourceUsecases(PriceSourceUsecasesBase):
@@ -51,9 +50,6 @@ class GallimardPriceSourceUsecases(PriceSourceUsecasesBase):
             finders = self.__details_factory(html)
             (price, currency) = finders.price_and_currency()
 
-            UnitTestCapture.capture(
-                f"src/usecases/price/tests/dataset/gallimard_{book.isbn}.html", html
-            )
             return BookPrice(
                 isbn=book.isbn,
                 source=self.base_url,

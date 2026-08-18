@@ -1,4 +1,3 @@
-import base64
 from abc import ABC, abstractmethod
 
 from ports.http import HttpClientBase
@@ -16,11 +15,11 @@ class BookDetailsFinderBase(DetailsHtmlFinderBase, ABC):
     @abstractmethod
     def __init__(self, html: str): ...
 
-    async def _fetch_image(self, client: HttpClientBase, url: str) -> str:
+    async def _fetch_image(self, client: HttpClientBase, url: str) -> tuple[str, bytes]:
         if not url:
-            return ""
-        image_bytes = await client.get_content(url)
-        return base64.b64encode(image_bytes).decode("utf-8")
+            return "", b""
+        image_bytes = await client.get_image(url)
+        return url, image_bytes
 
     @abstractmethod
     def isbn(self, default: str) -> str: ...
@@ -44,7 +43,7 @@ class BookDetailsFinderBase(DetailsHtmlFinderBase, ABC):
     def official(self) -> bool: ...
 
     @abstractmethod
-    async def image(self, client: HttpClientBase, **kwargs) -> str: ...
+    async def image(self, client: HttpClientBase, **kwargs) -> tuple[str, bytes]: ...
 
     @abstractmethod
     def is_classic_version(self) -> bool: ...

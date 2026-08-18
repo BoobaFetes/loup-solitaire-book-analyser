@@ -5,7 +5,6 @@ from collections.abc import Callable
 from domain import Book
 from ports.http import HttpClientBase
 from ports.usecase import BookDetailsFinderBase, BookListFinderBase
-from usecases.UnitTestCapture import UnitTestCapture
 
 
 class NonOfficialBookUseCases:
@@ -66,9 +65,7 @@ class NonOfficialBookUseCases:
     ) -> Book | None:
         book: Book | None = None
         try:
-            self.__logger.info(
-                f"get book details from : {url}",
-            )
+            self.__logger.info(f"get book details from : {url}")
 
             active_client = client or self.__client
             html = await active_client.get_text(url, "latin-1")
@@ -89,8 +86,10 @@ class NonOfficialBookUseCases:
                     f"Could not find a valid book's number at {url}. Defaulting to {numero}.",
                 )
 
-            image = await details.image(active_client, base_url=self.__base_url)
-            if not image:
+            image_url, image_content = await details.image(
+                active_client, base_url=self.__base_url
+            )
+            if not image_url or not image_content:
                 self.__logger.warning(
                     f"No image content fetched for book URL: {url}",
                 )
@@ -104,13 +103,11 @@ class NonOfficialBookUseCases:
                 lastParutionDate=details.lastParutionDate("1900-01-01"),
                 description=details.description(""),
                 isbn=details.isbn(""),
-                image=image,
+                image="",
+                imageSourceUrl=image_url,
+                imageContent=image_content,
                 prices=[],
                 official=False,
-            )
-            UnitTestCapture.capture(
-                f"src/usecases/book/tests/dataset/biblio_aventurier_{book.isbn}.html",
-                html,
             )
         except Exception as e:
             self.__logger.error(

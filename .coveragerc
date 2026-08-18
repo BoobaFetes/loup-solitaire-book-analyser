@@ -2,6 +2,10 @@
 omit =
     */__init__.py
     */main.py
+    # ignorer les fichiers de test
+    *test_*.py
+    *fake_*.py
+    *Fake*.py
 
 [report]
 omit =

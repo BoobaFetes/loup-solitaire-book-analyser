@@ -44,6 +44,11 @@ htmlcov/
 # Jupyter
 .ipynb_checkpoints/
 
-# apps repository (logs and data used in prod too)
+# apps repository (logs used in stg/prod too)
 logs/
-data/
+assets/**
+caches/
+
+# delivery process
+k8s/overlays/*-build.yaml
+k8s/**/charts/

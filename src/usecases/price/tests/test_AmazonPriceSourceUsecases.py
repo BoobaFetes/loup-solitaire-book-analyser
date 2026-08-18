@@ -1,8 +1,9 @@
 import asyncio
 from pathlib import Path
 
-from adapters.usecase.amazon.AmazonPriceDetailsFinder import AmazonPriceDetailsFinder
 from adapters.browser.tests.fake import FakeBrowser, FakePageHandler
+from adapters.cache.InMemoryCacheAdapter import InMemoryCacheAdapter
+from adapters.usecase.amazon.AmazonPriceDetailsFinder import AmazonPriceDetailsFinder
 from domain import Book
 from usecases.price.AmazonPriceSourceUsecases import AmazonPriceSourceUsecases
 
@@ -35,6 +36,7 @@ def test_fetch_bookprice_returns_amazon_price_from_dataset():
         BASE_URL,
         AmazonPriceDetailsFinder,
         FakeBrowser(page),
+        inmemory_cache=InMemoryCacheAdapter(),
         request_delay_seconds=0,
     )
 
@@ -60,6 +62,7 @@ def test_fetch_bookprice_matches_agarash_title_with_apostrophe_variant():
         BASE_URL,
         AmazonPriceDetailsFinder,
         FakeBrowser(page),
+        inmemory_cache=InMemoryCacheAdapter(),
         request_delay_seconds=0,
     )
 
@@ -83,6 +86,7 @@ def test_fetch_bookprice_returns_not_set_price_for_gallimard_missing_book_withou
         BASE_URL,
         AmazonPriceDetailsFinder,
         FakeBrowser(page),
+        inmemory_cache=InMemoryCacheAdapter(),
         request_delay_seconds=0,
     )
 
@@ -108,6 +112,7 @@ def test_fetch_bookprice_returns_none_when_amazon_result_is_not_visible():
         BASE_URL,
         AmazonPriceDetailsFinder,
         FakeBrowser(page),
+        inmemory_cache=InMemoryCacheAdapter(),
         request_delay_seconds=0,
     )
 

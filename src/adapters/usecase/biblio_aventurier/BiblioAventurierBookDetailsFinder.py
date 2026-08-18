@@ -252,7 +252,7 @@ class BiblioAventurierBookDetailsFinder(BookDetailsFinderBase):
     def official(self) -> bool:
         return False
 
-    async def image(self, client: HttpClientBase, **kwargs) -> str:
+    async def image(self, client: HttpClientBase, **kwargs) -> tuple[str, bytes]:
         # check parameters
         base_url = kwargs.get("base_url", "")
         if not base_url:
@@ -266,7 +266,7 @@ class BiblioAventurierBookDetailsFinder(BookDetailsFinderBase):
         elements = self.__soup.select("table#AutoNumber1 a")
         if not elements:
             self.__logger.error("No potential image information found in the page.")
-            return ""
+            return "", b""
 
         urls = [
             cast(str, element.attrs["href"]).replace("../..", base_url)
@@ -276,7 +276,7 @@ class BiblioAventurierBookDetailsFinder(BookDetailsFinderBase):
 
         url = urls[-1].replace("../..", base_url) if len(urls) else ""
         if not url:
-            return ""
+            return "", b""
 
         try:
             return await self._fetch_image(client, url)
@@ -285,7 +285,7 @@ class BiblioAventurierBookDetailsFinder(BookDetailsFinderBase):
                 f"Failed to fetch or encode image from URL: {url} - reason: {type(e).__name__}: {e}",
                 exc_info=True,
             )
-            return ""
+            return "", b""
 
     def is_classic_version(self) -> bool:
         element = self.__soup.select_one("table#AutoNumber1 p:nth-child(1)")

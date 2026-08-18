@@ -28,7 +28,7 @@ class FakeUnitOfWork(IUnitOfWork):
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
         pass
 
-    async def begin_transaction(self, transaction_name: str) -> None:
+    async def begin_transaction(self) -> None:
         pass
 
     async def commit_transaction(self) -> None:

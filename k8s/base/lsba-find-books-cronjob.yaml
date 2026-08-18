@@ -10,7 +10,7 @@ spec:
     metadata:
       name: lsba-find-books-job
       labels:
-        role: lsba-batch
+        lsba-db-postgresql-client: "true"
     spec:
       backoffLimit: 2 # 2 tentatives max en cas d'echec
       template:
@@ -18,9 +18,9 @@ spec:
           serviceAccountName: lsba-sa-no-access
           securityContext:
             runAsNonRoot: true
-            runAsUser: 4001
-            runAsGroup: 4000
-            fsGroup: 4000
+            runAsUser: 4000
+            runAsGroup: 4001
+            fsGroup: 4001
             seccompProfile:
               type: RuntimeDefault
           volumes:
@@ -35,10 +35,10 @@ spec:
                 - configMapRef:
                     name: lsba-cm
                     optional: false
-              volumeMounts:
+              volumeMounts:       
                 - name: project-volume
-                  mountPath: /app/data
-                  subPath: data
+                  mountPath: /app/assets
+                  subPath: assets         
                 - name: project-volume
                   mountPath: /app/logs
                   subPath: logs

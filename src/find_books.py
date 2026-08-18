@@ -3,7 +3,6 @@ import logging
 from pathlib import Path
 
 from ioc import new_ioc_container, print_environment_variables
-from usecases.UnitTestCapture import UnitTestCapture
 
 
 async def main():
@@ -15,7 +14,6 @@ async def main():
     logger.info("IOC container initialized")
 
     print_environment_variables(container, logger)
-    UnitTestCapture.setup(container.config.env() == "test", container.file_system())
 
     # arrange
     book_list_usecases = container.book_list_usecases()
@@ -32,6 +30,9 @@ async def main():
     sorted_book = sorted(books, key=lambda b: b.numero)
     for book in sorted_book:
         logger.info(f" - {book}")
+
+    logger.info("Finished find books process")
+    await container.inmemory_cache().flush()
 
 
 if __name__ == "__main__":

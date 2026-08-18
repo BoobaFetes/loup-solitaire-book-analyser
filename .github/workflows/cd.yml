@@ -1,0 +1,122 @@
+# -----------------------------------------------------------------------------
+# CD (Continuous Delivery) - disabled draft
+#
+# This workflow documents the intended staging/production delivery path.
+# It is intentionally disabled for now: the deploy job has `if: false`.
+#
+# Target design:
+#   - one CD workflow for both stg and prod;
+#   - CD builds and publishes the Docker image used by Kubernetes workloads;
+#   - the selected GitHub Environment provides the secrets for that context;
+#   - the PostgreSQL credential Secret is created/updated by CD before applying
+#     Kubernetes manifests;
+#   - PostgreSQL secrets should be rotated, but for now rotation is performed
+#     manually by updating GitHub Environment secrets.
+#
+# Open point:
+#   The draft below still reads passwords from GitHub Environment secrets. This
+#   is enough to create/update Kubernetes Secrets, but it is not a complete
+#   password rotation strategy. A later design must decide how passwords are
+#   generated, stored and audited.
+#   We are considering a CronJob to automatically rotate stg and prod passwords.
+#
+# To enable later:
+#   - configure GitHub Environments named `stg` and `prod`;
+#   - add the required environment secrets;
+#   - configure Kubernetes authentication in the dedicated setup step;
+#   - replace `if: false` with the desired deployment condition.
+# -----------------------------------------------------------------------------
+
+name: CD
+
+permissions:
+  contents: read
+  packages: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      env_target:
+        description: Kubernetes environment to deploy
+        required: true
+        type: choice
+        options:
+          - stg
+          - prod
+
+jobs:
+  deploy:
+    if: false
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.env_target }}
+
+    env:
+      TARGET_ENV: ${{ inputs.env_target }}
+      NAMESPACE: lsba-ns-${{ inputs.env_target }}
+      IMAGE_NAME: ghcr.io/${{ github.repository }}
+      IMAGE_TAG: ${{ github.sha }}
+      POSTGRESQL_SECRET_NAME: lsba-secret-postgresql-credentials-${{ inputs.env_target }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        # GHCR is used as a placeholder in this disabled draft.
+        # The final registry depends on the selected cloud provider
+        # (for example AWS ECR or Azure Container Registry).
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish Docker image
+        # Publishing the delivery artifact means pushing the Docker image to the
+        # environment registry selected for stg/prod.
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ env.IMAGE_NAME }}:${{ env.TARGET_ENV }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Configure Kubernetes access
+        run: |
+          echo "Kubernetes authentication is intentionally not configured yet."
+          echo "Future CD should configure kubectl from the selected GitHub Environment."
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kustomize build "k8s/overlays/$TARGET_ENV" --enable-helm \
+            | kubectl apply -f -
+
+      - name: Create or update PostgreSQL credential Secret
+        # This step mirrors GitHub Environment secrets into Kubernetes.
+        # It does not generate or rotate passwords by itself.
+        env:
+          DB_MIGRATION_PASSWORD: ${{ secrets.DB_MIGRATION_PASSWORD }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          REPLICATION_PASSWORD: ${{ secrets.REPLICATION_PASSWORD }}
+        run: |
+          kubectl create secret generic "$POSTGRESQL_SECRET_NAME" \
+            --namespace "$NAMESPACE" \
+            --from-literal=password="$DB_MIGRATION_PASSWORD" \
+            --from-literal=postgres-password="$POSTGRES_PASSWORD" \
+            --from-literal=replication-password="$REPLICATION_PASSWORD" \
+            --dry-run=client \
+            -o yaml \
+            | kubectl apply -f -
+
+      - name: Placeholder for application database roles
+        run: |
+          echo "Future step:"
+          echo "- create/update application login roles"
+          echo "- grant database CONNECT privileges"
+          echo "- run before Alembic and application rollout"

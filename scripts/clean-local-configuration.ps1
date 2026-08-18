@@ -16,12 +16,8 @@ $commands += 'rm -rf /mnt/lsba'
 # delete groups
 
 $groups = @(
-    @{ gid = 4000; name = "lsba-dev-app" },
-    @{ gid = 4001; name = "lsba-dev-data" }
-    # not used in dev environment @{ gid = 4100; name = "lsba-stg-app" },
-    # not used in dev environment @{ gid = 4101; name = "lsba-stg-data" },
-    # not used in dev environment @{ gid = 4200; name = "lsba-prod-app" },
-    # not used in dev environment @{ gid = 4201; name = "lsba-prod-data" }
+    @{ gid = 4001; name = "lsba-dev-app" },
+    @{ gid = 4002; name = "lsba-dev-data" }
 )
 $groupscmd = ""
 foreach ($group in $groups) {
