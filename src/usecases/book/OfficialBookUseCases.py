@@ -183,6 +183,8 @@ class OfficialBookUseCases:
                 else []
             )
 
+            image_url, image_content = await details.image(active_client)
+
             book = Book(
                 id=id,
                 url=url,
@@ -192,7 +194,9 @@ class OfficialBookUseCases:
                 lastParutionDate=details.lastParutionDate("1900-01-01"),
                 description=details.description(""),
                 isbn=isbn,
-                image=await details.image(active_client),
+                image="",
+                imageSourceUrl=image_url,
+                imageContent=image_content,
                 prices=prices,
                 official=True,
             )

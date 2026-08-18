@@ -1,43 +1,82 @@
-import copy
 import logging
-from typing import Any, cast
+from datetime import date
 
-from sqlalchemy import Engine
+from sqlalchemy import Select, select
+from sqlalchemy.orm import joinedload
 
 from adapters.database.sqlalchemy.DbContext import DbContext
 from domain import Book, BookPrice
-from ports.database import (
-    IBookPriceRepository,
-    IBookRepository,
-    TBookListField,
-)
+from ports.database import IBookRepository, TBookListField
+from persistence.sqlalchemy.entities.AuthorEntity import AuthorEntity
+from persistence.sqlalchemy.entities.BookAuthorEntity import BookAuthorEntity
+from persistence.sqlalchemy.entities.BookEntity import BookEntity
+from persistence.sqlalchemy.entities.BookPriceEntity import BookPriceEntity
 
 
 class BookRepository(IBookRepository):
-    """Implémentation d'un dépôt de books basé sur SQLAlchemy.
-
-    Utile pour :
-        - tests unitaires rapides,
-        - prototypes sans persistance,
-        - ou comme stub en développement.
-    Args:
-        BookRepositoryInterface (BookRepositoryInterface): Interface du dépôt de books.
-    """
-
-    def __init__(self, context: DbContext, prices: IBookPriceRepository):
+    def __init__(self, context: DbContext):
         self.__logger = logging.getLogger(self.__class__.__name__)
-        self.__engine: Engine = context.engine
-        self.__prices: IBookPriceRepository = prices
+        self.__context = context
 
-    def __to_entities(self, data: list[Document]) -> list[Book]:
-        return [self.__to_entity(item) for item in data]
+    def __select(self) -> Select[tuple[BookEntity]]:
+        return (
+            select(BookEntity)
+            .options(
+                joinedload(BookEntity.authors).joinedload(BookAuthorEntity.author),
+                joinedload(BookEntity.prices),
+            )
+            .order_by(BookEntity.id)
+        )
 
-    def __to_entity(self, data: Document) -> Book:
-        return Book(**data)
+    def __to_entity(self, data: BookEntity) -> Book:
+        authors = [
+            book_author.author.name
+            for book_author in sorted(data.authors, key=lambda item: item.position)
+        ]
+        return Book(
+            id=data.id,
+            url=data.url,
+            isbn=data.isbn,
+            numero=data.numero,
+            titre=data.titre,
+            authors=authors,
+            lastParutionDate=data.lastParutionDate,
+            description=data.description,
+            official=data.official,
+            image=data.image,
+            acquired=data.acquired,
+            prices=[
+                BookPrice(
+                    isbn=price.isbn,
+                    source=price.source,
+                    date=price.date,
+                    price=price.price,
+                    url=price.url,
+                    currency=price.currency,
+                )
+                for price in sorted(
+                    data.prices,
+                    key=lambda item: (item.source, item.date),
+                )
+            ],
+        )
 
-    def __to_document(self, entity: Book) -> dict[str, Any]:
-        json_data = entity.model_dump(mode="json")
-        return json_data
+    def __copy_to_orm(self, source: Book, target: BookEntity) -> None:
+        target.id = source.id
+        target.url = source.url
+        target.isbn = source.isbn
+        target.numero = source.numero
+        target.titre = source.titre
+        target.lastParutionDate = self.__to_date(source.lastParutionDate)
+        target.description = source.description
+        target.official = source.official
+        target.image = source.image
+        target.acquired = source.acquired
+
+    def __to_date(self, value: date | str) -> date:
+        if isinstance(value, date):
+            return value
+        return date.fromisoformat(value)
 
     async def list(
         self, filters: dict[TBookListField, int | str | bool] = {}
@@ -47,41 +86,34 @@ class BookRepository(IBookRepository):
         _titre = str(filters.get("titre", ""))
         _numero = int(filters.get("numero", 0))
         try:
-            query = Query()
-            items = self.__store.search(
-                (query.id == _id if _id else query.id.exists())
-                & (query.isbn == _isbn if _isbn else query.isbn.exists())
-                & (query.titre == _titre if _titre else query.titre.exists())
-                & (query.numero == _numero if _numero else query.numero.exists())
-            )
-            self.__logger.info(
-                f"Listed {len(items)} books from TinyDB",
-            )
-            data = self.__to_entities(items)
+            statement = self.__select()
+            if _id:
+                statement = statement.where(BookEntity.id == _id)
+            if _isbn:
+                statement = statement.where(BookEntity.isbn == _isbn)
+            if _titre:
+                statement = statement.where(BookEntity.titre == _titre)
+            if _numero:
+                statement = statement.where(BookEntity.numero == _numero)
+
+            with self.__context.operation_session() as session:
+                items = list(session.scalars(statement).unique())
+                data = [self.__to_entity(item) for item in items]
+            self.__logger.info("Listed %s books from SQLAlchemy", len(data))
             return data
         except Exception as e:
             self.__logger.error(
-                f"Error listing books from file system: {type(e).__name__}: {e}",
+                f"Error listing books: {type(e).__name__}: {e}",
                 exc_info=True,
             )
         return []
 
     async def get(self, id: int) -> Book | None:
-        """
-        Get an entity by its ID.
-
-        :param id: The ID of the entity to be retrieved.
-        :return: The entity with the specified ID.
-        """
         try:
-            data = cast(Document | None, self.__store.get(doc_id=id))
-            if not data:
-                return None
-
-            item = self.__to_entity(data)
-            item.prices = await self.__prices.list({"isbn": item.isbn})
-
-            return item
+            statement = self.__select().where(BookEntity.id == id)
+            with self.__context.operation_session() as session:
+                item = session.scalars(statement).unique().one_or_none()
+                return self.__to_entity(item) if item else None
         except Exception as e:
             self.__logger.error(
                 f"Error getting book for id '{id}': {type(e).__name__}: {e}",
@@ -95,46 +127,97 @@ class BookRepository(IBookRepository):
             item = await self.upsert(entity)
             if item:
                 results.append(item)
-
         return results
 
     async def upsert(self, entity: Book) -> Book | None:
-        # NOTE :
-        # la gestion des nested objects (BookPrice) est trop compliquée car il faut gérer les cas où: :
-        # 1. un prix est orphelin -> delete
-        # 2. un prix est modifié (cf la methode __eq__) -> update
-        # 3. un prix est nouveau (pas déjà dans la db) -> insert
-        # DONC on fait simple -> on utilise bêtement upsert_many() sur les prix, nous utiliserons dans une prochaine evolution un ORM capable de se charger de ces cas (ex: SQLAlchemy, Tortoise ORM, etc...)
         try:
-            item = copy.deepcopy(entity)
-            prices_to_store: list[BookPrice] = item.prices
-            item.prices = []
+            with self.__context.operation_session() as session:
+                item = session.get(BookEntity, entity.id)
+                if item is None:
+                    item = session.scalar(
+                        select(BookEntity).where(BookEntity.isbn == entity.isbn)
+                    )
+                if item is None:
+                    item = BookEntity()
+                    session.add(item)
 
-            await self.__prices.upsert_many(prices_to_store)
+                self.__copy_to_orm(entity, item)
+                item.authors.clear()
 
-            document = self.__to_document(item)
-            id = self.__store.upsert(
-                document,
-                (Query().id == entity.id),
-            )
-            if not id:
-                self.__logger.warning(
-                    f"Failed to upsert book n°'{entity.numero}' (id: {entity.id}) in TinyDB"
-                )
-                return None
+                for position, author_name in enumerate(entity.authors):
+                    author = session.scalar(
+                        select(AuthorEntity).where(AuthorEntity.name == author_name)
+                    )
+                    if author is None:
+                        author = AuthorEntity(name=author_name)
+                    item.authors.append(
+                        BookAuthorEntity(author=author, position=position)
+                    )
 
-            item = await self.get(id[0])
-            if not item:
-                self.__logger.warning(
-                    f"Failed to retrieve upserted book n°'{entity.numero}' (id: {entity.id}) in TinyDB"
-                )
-                return None
-
-            return item
+                session.flush()
+                for price in entity.prices:
+                    session.merge(
+                        BookPriceEntity(
+                            isbn=price.isbn,
+                            source=price.source,
+                            date=price.date,
+                            price=price.price,
+                            url=price.url,
+                            currency=price.currency,
+                        )
+                    )
+                session.flush()
+                return self.__to_entity(item)
         except Exception as e:
             self.__logger.error(
                 f"Error upserting book n°'{entity.numero}' (id: {entity.id}): {type(e).__name__}: {e}",
                 exc_info=True,
             )
+        return None
 
+    async def add_many(self, entities: list[Book]) -> list[Book]:
+        results: list[Book] = []
+        for entity in entities:
+            item = await self.add(entity)
+            if item:
+                results.append(item)
+        return results
+
+    async def add(self, entity: Book) -> Book | None:
+        try:
+            with self.__context.operation_session() as session:
+                item = BookEntity()
+                self.__copy_to_orm(entity, item)
+                session.add(item)
+                session.flush()
+                return self.__to_entity(item)
+        except Exception as e:
+            self.__logger.error(
+                f"Error adding book n°'{entity.numero}' (id: {entity.id}): {type(e).__name__}: {e}",
+                exc_info=True,
+            )
+        return None
+
+    async def update_many(self, entities: list[Book]) -> list[Book]:
+        results: list[Book] = []
+        for entity in entities:
+            item = await self.update(entity)
+            if item:
+                results.append(item)
+        return results
+
+    async def update(self, entity: Book) -> Book | None:
+        try:
+            with self.__context.operation_session() as session:
+                item = session.get(BookEntity, entity.id)
+                if item is None:
+                    return None
+                self.__copy_to_orm(entity, item)
+                session.flush()
+                return self.__to_entity(item)
+        except Exception as e:
+            self.__logger.error(
+                f"Error updating book n°'{entity.numero}' (id: {entity.id}): {type(e).__name__}: {e}",
+                exc_info=True,
+            )
         return None

@@ -190,20 +190,7 @@ class HttpClientAdapter(HttpClientBase[TJsonResponse]):
         retry: int = 3,
         headers: dict[str, str] | None = None,
     ) -> bytes:
-        if self.__cache_enabled:
-            content = self.__inmemory_cache.get(endpoint)
-            if content:
-                return cast(bytes, content)
-
         response = await self.__get(endpoint, retry, headers=headers)
-        result = response.content
-
-        if self.__cache_enabled:
-            self.__inmemory_cache.set_background(
-                endpoint,
-                result,
-            )
-
-        return result
+        return response.content
 
     # endregion

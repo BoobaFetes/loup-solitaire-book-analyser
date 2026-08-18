@@ -1,10 +1,11 @@
 import logging
 from datetime import date
-from typing import Any
 
 from adapters.database.sqlalchemy.DbContext import DbContext
 from domain import BookPrice
 from ports.database import IBookPriceRepository, TBookPriceListField
+from persistence.sqlalchemy.entities.BookPriceEntity import BookPriceEntity
+from sqlalchemy import Select, select
 
 
 class BookPriceRepository(IBookPriceRepository):
@@ -20,35 +21,55 @@ class BookPriceRepository(IBookPriceRepository):
 
     def __init__(self, context: DbContext):
         self.__logger = logging.getLogger(self.__class__.__name__)
-        self.__store: Table = context.prices
+        self.__context = context
 
-    def __to_entities_as_dict(self, data: list[Document]) -> dict[str, list[BookPrice]]:
+    def __to_entities_as_dict(
+        self, data: list[BookPriceEntity]
+    ) -> dict[str, list[BookPrice]]:
         result: dict[str, list[BookPrice]] = {}
         for item in data:
             entity = self.__to_entity(item)
             result.setdefault(entity.isbn, []).append(entity)
         return result
 
-    def __to_entities(self, data: list[Document]) -> list[BookPrice]:
+    def __to_entities(self, data: list[BookPriceEntity]) -> list[BookPrice]:
         return [self.__to_entity(item) for item in data]
 
-    def __to_entity(self, data: Document) -> BookPrice:
-        return BookPrice(**data)
+    def __to_entity(self, data: BookPriceEntity) -> BookPrice:
+        return BookPrice(
+            isbn=data.isbn,
+            source=data.source,
+            date=data.date,
+            price=data.price,
+            url=data.url,
+            currency=data.currency,
+        )
 
-    def __to_document(self, entity: BookPrice) -> dict[str, Any]:
-        json_data = entity.model_dump(mode="json")
-        return json_data
+    def __to_orm_entity(self, entity: BookPrice) -> BookPriceEntity:
+        return BookPriceEntity(
+            isbn=entity.isbn,
+            source=entity.source,
+            date=entity.date,
+            price=entity.price,
+            url=entity.url,
+            currency=entity.currency,
+        )
+
+    def __select(self) -> Select[tuple[BookPriceEntity]]:
+        return select(BookPriceEntity).order_by(
+            BookPriceEntity.isbn,
+            BookPriceEntity.source,
+            BookPriceEntity.date,
+        )
 
     async def dict_by_isbns(self, isbns: list[str] = []) -> dict[str, list[BookPrice]]:
         try:
-            if not isbns:
-                data = self.__store.all()
-            else:
-                query = Query()
-                data = self.__store.search(
-                    query.isbn.one_of(isbns) if isbns else query.isbn.exists()
-                )
+            statement = self.__select()
+            if isbns:
+                statement = statement.where(BookPriceEntity.isbn.in_(isbns))
 
+            with self.__context.operation_session() as session:
+                data = list(session.scalars(statement))
             return self.__to_entities_as_dict(data)
         except Exception as e:
             self.__logger.error(
@@ -61,10 +82,12 @@ class BookPriceRepository(IBookPriceRepository):
         self, sources: list[str], isbns: list[str] = []
     ) -> dict[str, dict[str, BookPrice | None]]:
         try:
-            query = Query()
-            data = self.__store.search(
-                query.isbn.one_of(isbns) & query.source.one_of(sources)
-            )
+            statement = self.__select().where(BookPriceEntity.source.in_(sources))
+            if isbns:
+                statement = statement.where(BookPriceEntity.isbn.in_(isbns))
+
+            with self.__context.operation_session() as session:
+                data = list(session.scalars(statement))
 
             # action 1: fill with data from database
             results: dict[str, dict[str, BookPrice | None]] = {}
@@ -97,17 +120,19 @@ class BookPriceRepository(IBookPriceRepository):
         _source = str(filters.get("source", ""))
         _date = str(filters.get("date", ""))
         try:
-            query = Query()
-            data = self.__to_entities(
-                self.__store.search(
-                    (query.isbn == _isbn if _isbn else query.isbn.exists())
-                    & (query.source == _source if _source else query.source.exists())
-                    & (query.date == _date if _date else query.date.exists())
-                )
-            )
+            statement = self.__select()
+            if _isbn:
+                statement = statement.where(BookPriceEntity.isbn == _isbn)
+            if _source:
+                statement = statement.where(BookPriceEntity.source == _source)
+            if _date:
+                statement = statement.where(BookPriceEntity.date == date.fromisoformat(_date))
+
+            with self.__context.operation_session() as session:
+                data = self.__to_entities(list(session.scalars(statement)))
 
             self.__logger.info(
-                f"Listed {len(data)} book prices for ISBN='{_isbn}' and source='{_source}' and date='{_date}' from file system",
+                f"Listed {len(data)} book prices for ISBN='{_isbn}' and source='{_source}' and date='{_date}' from SQLAlchemy",
             )
             return data
         except Exception as e:
@@ -126,23 +151,54 @@ class BookPriceRepository(IBookPriceRepository):
         """
         _isbn, _source, _date = id
         try:
-            query = Query()
-            data = self.__to_entities(
-                self.__store.search(
-                    (query.isbn == _isbn)
-                    & (query.source == _source)
-                    & (query.date == _date.isoformat())
+            with self.__context.operation_session() as session:
+                data = session.get(
+                    BookPriceEntity,
+                    {
+                        "isbn": _isbn,
+                        "source": _source,
+                        "date": _date,
+                    },
                 )
-            )
-            if not data:
+            if data is None:
                 self.__logger.info(
-                    f"No book price found for ISBN '{_isbn}' and source '{_source}' and date '{_date}' in TinyDB"
+                    f"No book price found for ISBN '{_isbn}' and source '{_source}' and date '{_date}' in SQLAlchemy"
                 )
                 return None
-            return data[0]
+            return self.__to_entity(data)
         except Exception as e:
             self.__logger.error(
                 f"Error getting book price for ISBN '{_isbn}' and source '{_source}' and date '{_date}': {type(e).__name__}: {e}",
+                exc_info=True,
+            )
+        return None
+
+    async def add_many(self, entities: list[BookPrice]) -> list[BookPrice]:
+        results: list[BookPrice] = []
+        for entity in entities:
+            item = await self.add(entity)
+            if item:
+                results.append(item)
+
+        return results
+
+    async def add(self, entity: BookPrice) -> BookPrice | None:
+        try:
+            with self.__context.operation_session() as session:
+                session.add(self.__to_orm_entity(entity))
+                session.flush()
+                item = session.get(
+                    BookPriceEntity,
+                    {
+                        "isbn": entity.isbn,
+                        "source": entity.source,
+                        "date": entity.date,
+                    },
+                )
+                return self.__to_entity(item) if item else None
+        except Exception as e:
+            self.__logger.error(
+                f"Error adding book price for ISBN '{entity.isbn}' and source '{entity.source}' on date '{entity.date.isoformat()}': {type(e).__name__}: {e}",
                 exc_info=True,
             )
         return None
@@ -158,31 +214,48 @@ class BookPriceRepository(IBookPriceRepository):
 
     async def upsert(self, entity: BookPrice) -> BookPrice | None:
         try:
-            document = self.__to_document(entity)
-            id = self.__store.upsert(
-                document,
-                (Query().isbn == entity.isbn)
-                & (Query().source == entity.source)
-                & (Query().date == entity.date.isoformat()),
-            )
-            if not id:
-                self.__logger.warning(
-                    f"Failed to upsert book price for ISBN '{entity.isbn}' and source '{entity.source}' and date '{entity.date}' in TinyDB"
-                )
-                return None
-
-            item = await self.get((entity.isbn, entity.source, entity.date))
-            if not item:
-                self.__logger.warning(
-                    f"Failed to retrieve upserted book price for ISBN '{entity.isbn}' and source '{entity.source}' and date '{entity.date}' in TinyDB"
-                )
-                return None
-
-            return item
+            with self.__context.operation_session() as session:
+                item = session.merge(self.__to_orm_entity(entity))
+                session.flush()
+                return self.__to_entity(item)
         except Exception as e:
             self.__logger.error(
                 f"Error upserting book price for ISBN '{entity.isbn}' and source '{entity.source}' on date '{entity.date.isoformat()}': {type(e).__name__}: {e}",
                 exc_info=True,
             )
 
+        return None
+
+    async def update_many(self, entities: list[BookPrice]) -> list[BookPrice]:
+        results: list[BookPrice] = []
+        for entity in entities:
+            item = await self.update(entity)
+            if item:
+                results.append(item)
+
+        return results
+
+    async def update(self, entity: BookPrice) -> BookPrice | None:
+        try:
+            with self.__context.operation_session() as session:
+                item = session.get(
+                    BookPriceEntity,
+                    {
+                        "isbn": entity.isbn,
+                        "source": entity.source,
+                        "date": entity.date,
+                    },
+                )
+                if item is None:
+                    return None
+                item.price = entity.price
+                item.url = entity.url
+                item.currency = entity.currency
+                session.flush()
+                return self.__to_entity(item)
+        except Exception as e:
+            self.__logger.error(
+                f"Error updating book price for ISBN '{entity.isbn}' and source '{entity.source}' on date '{entity.date.isoformat()}': {type(e).__name__}: {e}",
+                exc_info=True,
+            )
         return None

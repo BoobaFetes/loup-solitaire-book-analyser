@@ -41,7 +41,9 @@ def test_fetch_book_builds_non_official_book_from_biblio_dataset():
     assert book.numero == 2
     assert book.titre == "La Traversée Infernale"
     assert "Joe Dever" in book.authors
-    assert book.image
+    assert book.image == ""
+    assert book.imageSourceUrl.lower().endswith(".jpg")
+    assert book.imageContent == b"fake-image"
 
 
 def test_fetch_book_ignores_classic_version():

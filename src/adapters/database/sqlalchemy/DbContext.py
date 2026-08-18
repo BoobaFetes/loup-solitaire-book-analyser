@@ -1,6 +1,10 @@
 import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 
-from sqlalchemy import create_engine
+from sqlalchemy import Engine, create_engine
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm.session import SessionTransaction
 
 from ports.database import IDbContext
 
@@ -29,12 +33,38 @@ class DbContext(IDbContext):
             )
 
         # create the SQLAlchemy engine with the provided connection string and additional keyword arguments
-        self.engine = create_engine(
+        self.engine: Engine = create_engine(
             connection_string,
             **kwargs,
             echo=True,
             echo_pool=True,
         )
+        self.__session_factory = sessionmaker(
+            bind=self.engine,
+            expire_on_commit=False,
+        )
+        self.__session: Session | None = None
+        self.__transaction: SessionTransaction | None = None
+
+    @property
+    def session(self) -> Session | None:
+        return self.__session
+
+    @contextmanager
+    def operation_session(self) -> Iterator[Session]:
+        if self.__session is not None:
+            yield self.__session
+            return
+
+        session = self.__session_factory()
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
     async def __aenter__(self):
         await self.start()
@@ -54,13 +84,35 @@ class DbContext(IDbContext):
         """
         Stop the database context.
         """
-        self.__logger.info(f"Close TinyDB Database at {self.engine.url}")
+        if self.__session is not None:
+            await self.rollback_transaction()
+        self.__logger.info(f"Close Postgres Database at {self.engine.url}")
 
     async def begin_transaction(self):
-        pass
+        if self.__session is not None:
+            raise RuntimeError("A transaction is already active")
+
+        self.__session = self.__session_factory()
+        self.__transaction = self.__session.begin()
 
     async def commit_transaction(self):
-        pass
+        if self.__session is None or self.__transaction is None:
+            raise RuntimeError("No active transaction to commit")
+
+        try:
+            self.__transaction.commit()
+        finally:
+            self.__transaction = None
+            self.__session.close()
+            self.__session = None
 
     async def rollback_transaction(self):
-        pass
+        if self.__session is None or self.__transaction is None:
+            raise RuntimeError("No active transaction to rollback")
+
+        try:
+            self.__transaction.rollback()
+        finally:
+            self.__transaction = None
+            self.__session.close()
+            self.__session = None

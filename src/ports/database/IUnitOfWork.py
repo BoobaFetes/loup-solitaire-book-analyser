@@ -29,8 +29,6 @@ class IUnitOfWork(Protocol):
     async def begin_transaction(self) -> None:
         """
         Begin a new transaction.
-
-        :param transaction_name: The name of the transaction.
         """
         ...
 

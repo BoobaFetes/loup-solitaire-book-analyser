@@ -199,6 +199,7 @@ class IocContainer(containers.DeclarativeContainer):
         client=http_client,
         official_book=official_book_usecases,
         non_official_book=non_official_book_usecases,
+        fs=file_system,
     )
 
     book_price_usecases = providers.Singleton(

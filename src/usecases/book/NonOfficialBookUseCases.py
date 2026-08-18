@@ -86,8 +86,10 @@ class NonOfficialBookUseCases:
                     f"Could not find a valid book's number at {url}. Defaulting to {numero}.",
                 )
 
-            image = await details.image(active_client, base_url=self.__base_url)
-            if not image:
+            image_url, image_content = await details.image(
+                active_client, base_url=self.__base_url
+            )
+            if not image_url or not image_content:
                 self.__logger.warning(
                     f"No image content fetched for book URL: {url}",
                 )
@@ -101,7 +103,9 @@ class NonOfficialBookUseCases:
                 lastParutionDate=details.lastParutionDate("1900-01-01"),
                 description=details.description(""),
                 isbn=details.isbn(""),
-                image=image,
+                image="",
+                imageSourceUrl=image_url,
+                imageContent=image_content,
                 prices=[],
                 official=False,
             )

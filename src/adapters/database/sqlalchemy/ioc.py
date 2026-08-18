@@ -11,7 +11,7 @@ def make_unit_of_work(
 ) -> providers.Singleton[UnitOfWork]:
     context = providers.Singleton(
         DbContext,
-        connection_string=config.connection_string,
+        connection_string=config.connection_string_batch,
     )
     prices = providers.Singleton(
         BookPriceRepository,
@@ -20,7 +20,6 @@ def make_unit_of_work(
     books = providers.Singleton(
         BookRepository,
         context=context,
-        prices=prices,
     )
 
     return providers.Singleton(UnitOfWork, context=context, books=books, prices=prices)

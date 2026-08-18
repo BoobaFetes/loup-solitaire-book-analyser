@@ -29,9 +29,6 @@ class IDbContext(Protocol):
     async def begin_transaction(self):
         """
         Begin a new transaction.
-
-        :param transaction_name: The name of the transaction.
-
         """
         ...
 

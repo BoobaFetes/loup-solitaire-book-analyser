@@ -40,7 +40,9 @@ def test_fetch_book_builds_official_book_from_gallimard_dataset():
     assert book.lastParutionDate == "2022-03-03"
     assert book.prices[0].price == 16.5
     assert book.prices[0].source == BASE_URL
-    assert book.image
+    assert book.image == ""
+    assert book.imageSourceUrl.endswith(".jpg")
+    assert book.imageContent == b"fake-image"
 
 
 def test_fetch_book_ignores_page_when_author_is_not_joe_dever():

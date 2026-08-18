@@ -20,7 +20,7 @@ class Book:
 
     authors: the list of authors of the book.
 
-    image: the image in base64 format.
+    image: the image asset path.
 
     description: the description of the book.
 
@@ -43,6 +43,8 @@ class Book:
     official: bool = False
     prices: list[BookPrice] = field(default_factory=list)
     image: str = ""
+    imageSourceUrl: str = ""
+    imageContent: bytes = b""
     acquired: bool = False
 
     def __str__(self) -> str:

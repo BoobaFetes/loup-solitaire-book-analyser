@@ -3,7 +3,9 @@ import logging
 from domain import Book
 from ports.database import IUnitOfWork
 from ports.http import HttpClientBase
+from ports.os import IFileSystem
 from usecases.book import NonOfficialBookUseCases, OfficialBookUseCases
+from usecases.book.image_assets import write_book_cover_asset
 
 
 class BookListUseCases:
@@ -17,9 +19,11 @@ class BookListUseCases:
         client: HttpClientBase,
         official_book: OfficialBookUseCases,
         non_official_book: NonOfficialBookUseCases,
+        fs: IFileSystem,
     ):
         self.__unit_of_work = unit_of_work
         self.__client = client
+        self.__fs = fs
         self.__logger = logging.getLogger(self.__class__.__name__)
         self.__official_book: OfficialBookUseCases = official_book
         self.__non_official_book: NonOfficialBookUseCases = non_official_book
@@ -35,6 +39,7 @@ class BookListUseCases:
             books_sources.append(await self.__non_official_book.fetch_books(client))
 
         books: list[Book] = self.__merge_sources(books_sources[0], books_sources[1])
+        self.__write_image_assets(books)
 
         # tri par id de livre (on s'attend à id==numero) pour simplifier la lecture et la maintenance
         books.sort(key=lambda b: b.id)
@@ -45,6 +50,15 @@ class BookListUseCases:
             self.__logger.warning("Not all books were upserted to the repository.")
 
         return await self.__unit_of_work.books.list()
+
+    def __write_image_assets(self, books: list[Book]) -> None:
+        for book in books:
+            book.image = write_book_cover_asset(
+                self.__fs,
+                book.imageSourceUrl,
+                book.imageContent,
+            )
+            book.imageContent = b""
 
     def __merge_sources(
         self, official_books: list[Book], non_official_books: list[Book]

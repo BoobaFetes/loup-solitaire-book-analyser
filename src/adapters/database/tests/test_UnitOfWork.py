@@ -93,13 +93,13 @@ def test_transaction_methods_delegate_to_context():
     async def scenario():
         context = FakeDbContext()
         unit = UnitOfWork(context, UnusedBookRepository(), UnusedBookPriceRepository())
-        await unit.begin_transaction("sync")
+        await unit.begin_transaction()
         await unit.commit_transaction()
         await unit.rollback_transaction()
         return context.calls
 
     assert asyncio.run(scenario()) == [
-        ("begin", "sync"),
+        ("begin", None),
         ("commit", None),
         ("rollback", None),
     ]

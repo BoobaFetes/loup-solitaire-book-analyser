@@ -128,6 +128,26 @@ def test_enable_cache_false_bypasses_cache_reads_and_writes():
     assert asyncio.run(scenario()) == (True, "fresh", 0, 0)
 
 
+def test_get_image_bypasses_cache_even_when_cache_is_enabled():
+    async def scenario():
+        cache = _FakeEnabledCache(cached_value=b"cached-image")
+        client = HttpClientAdapter(
+            inmemory_cache=cache,
+            transport=httpx.MockTransport(
+                lambda request: httpx.Response(200, content=b"fresh-image")
+            ),
+            base_url="https://example.test",
+        )
+
+        await client.open()
+        result = await client.get_image("/")
+        await client.close()
+
+        return result, cache.get_calls, cache.set_background_calls, cache.cached_value
+
+    assert asyncio.run(scenario()) == (b"fresh-image", 0, 0, b"cached-image")
+
+
 @pytest.mark.parametrize(
     ("cache_adapter_enabled", "requested_state", "expected_result"),
     [

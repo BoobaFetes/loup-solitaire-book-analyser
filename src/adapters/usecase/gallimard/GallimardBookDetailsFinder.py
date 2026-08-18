@@ -119,15 +119,15 @@ class GallimardBookDetailsFinder(BookDetailsFinderBase):
             else []
         )
 
-    async def image(self, client: HttpClientBase, **kwargs) -> str:
+    async def image(self, client: HttpClientBase, **kwargs) -> tuple[str, bytes]:
         element = self.__soup.select_one("div.Book-cover img:first-child")
         if not element:
             self.__logger.error("No potential image information found in the page.")
-            return ""
+            return "", b""
 
         url = cast(str, element.attrs["src"]) if element.attrs.get("src", "") else ""
         if not url:
-            return ""
+            return "", b""
 
         try:
             return await self._fetch_image(client, url)
@@ -136,7 +136,7 @@ class GallimardBookDetailsFinder(BookDetailsFinderBase):
                 f"Failed to fetch or encode image from {url} - reason: {type(e).__name__}: {e}",
                 exc_info=True,
             )
-            return ""
+            return "", b""
 
     def is_classic_version(self) -> bool:
         raise NotImplementedError(
