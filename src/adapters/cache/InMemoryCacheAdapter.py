@@ -8,14 +8,14 @@ from ports.os.IFileSystem import IFileSystem
 
 
 class InMemoryCacheAdapter(InMemoryCacheInterface):
-    __base_dir: Path = Path("caches")
-
-    def __init__(self, fs: IFileSystem | None = None, enabled: bool = False):
+    def __init__(self, fs: IFileSystem, cache_dir: str, enabled: bool = False):
         self.enabled = enabled
         self.__logger = logging.getLogger(self.__class__.__name__)
         self.__cache: dict[str, CacheStoredValue] = {}
         self.__pending_writes: set[asyncio.Task[None]] = set()
-        self.__fs: IFileSystem = fs  # type: ignore
+        self.__fs: IFileSystem = fs
+        self.__cache_dir = cache_dir
+        self.__cache_path = self.__fs.get_path(cache_dir)
         if self.enabled and not self.__fs:
             raise ValueError(
                 "InMemoryCacheAdapter requires a file system when enabled."
@@ -38,16 +38,15 @@ class InMemoryCacheAdapter(InMemoryCacheInterface):
             self.__logger.info("In-memory cache is disabled.")
             return
 
-        if not self.__base_dir.exists():
-            self.__base_dir.mkdir(parents=True, exist_ok=True)
+        if not self.__fs.is_dir_exists(self.__cache_dir):
+            raise ValueError(
+                f"In-memory cache directory '{self.__cache_path}' does not exist."
+            )
 
         self.__logger.info(
-            f"In-memory cache is enabled, loading the cache from {self.__base_dir}"
+            f"In-memory cache is enabled, loading the cache from {self.__cache_path}."
         )
-        for file_path in self.__base_dir.rglob("*"):
-            if not file_path.is_file() or file_path.suffix != ".cache":
-                continue
-
+        for file_path in self.__fs.list_files(self.__cache_dir, "*.cache"):
             internal_key = self.__to_internal_key_from_cache_file(file_path)
             value = (
                 self.__fs.read_bytes(str(file_path))
@@ -63,7 +62,7 @@ class InMemoryCacheAdapter(InMemoryCacheInterface):
         """Clear the in-memory cache and delete all persisted files."""
         self.__cache.clear()
         if self.enabled:
-            self.__fs.clear("*.cache")
+            self.__fs.clear(self.__cache_dir, "*.cache")
 
     def get(self, key: str) -> CacheStoredValue | None:
         if not self.enabled:
@@ -83,7 +82,7 @@ class InMemoryCacheAdapter(InMemoryCacheInterface):
 
         internal_key = self.__to_internal_key(key)
         self.__cache[internal_key] = value
-        file_path = self.__base_dir / self.__to_cache_filename(internal_key, value)
+        file_path = self.__cache_path / self.__to_cache_filename(internal_key, value)
         if isinstance(value, bytes):
             await asyncio.to_thread(self.__fs.write_bytes, str(file_path), value)
             return
