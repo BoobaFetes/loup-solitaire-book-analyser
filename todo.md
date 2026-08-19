@@ -1,4 +1,4 @@
-# DOBNE LIST
+# DONE LIST
 
 1. merger les données liés aux livres afin de ne concerver que ceux de la liste officiel en premier et si un livre n'a pas été réédité récupérer ses données depuis le site de référence des fans
 1. scrapper les sites sélectionnés pour récupérer les prix de chaque livres via leur ISBN
