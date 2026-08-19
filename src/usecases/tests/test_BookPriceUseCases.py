@@ -37,6 +37,8 @@ def make_price(
 
 
 def test_fetch_prices_stores_only_new_changed_and_valid_prices():
+
+    # Arrange
     books = [make_book("9782075123211"), make_book("2070519031")]
     unchanged = make_price("9782075123211", "https://gallimard.test", 16.5)
     changed = make_price(
@@ -62,8 +64,10 @@ def test_fetch_prices_stores_only_new_changed_and_valid_prices():
         ],
     )
 
+    # Act
     results = asyncio.run(use_cases.fetch_prices(books))
 
+    # Assert
     assert results == {
         "9782075123211": [unchanged, not_set],
         "2070519031": [new_amazon_only],
@@ -72,15 +76,17 @@ def test_fetch_prices_stores_only_new_changed_and_valid_prices():
 
 
 def test_bind_prices_to_books_uses_copies_and_supports_amazon_only_prices():
+
+    # Arrange
     book = make_book("2070519031", "Sur la Piste du Loup")
     amazon_price = make_price("2070519031", "https://amazon.test", 42.0)
-    repository = FakeBookPriceRepository(
-        prices_by_isbn={"2070519031": [amazon_price]}
-    )
+    repository = FakeBookPriceRepository(prices_by_isbn={"2070519031": [amazon_price]})
     use_cases = BookPriceUseCases(FakeUnitOfWork(repository), [])
 
+    # Act
     results = asyncio.run(use_cases.bind_prices_to_books([book]))
 
+    # Assert
     assert results[0] is not book
     assert results[0].prices == [amazon_price]
     assert book.prices == []

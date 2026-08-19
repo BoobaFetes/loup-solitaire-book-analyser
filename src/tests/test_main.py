@@ -12,6 +12,8 @@ CAPTURES_FILE_CONTENT = f"{TEST_FILE_CONTENT}: captures/captures.png"
 
 
 def test_main_writes_expected_files_and_prints_status(monkeypatch, tmp_path, capsys):
+
+    # Arrange
     (tmp_path / "logs").mkdir()
     (tmp_path / "captures").mkdir()
     monkeypatch.chdir(tmp_path)
@@ -25,13 +27,17 @@ def test_main_writes_expected_files_and_prints_status(monkeypatch, tmp_path, cap
 
     monkeypatch.setattr(Path, "unlink", fake_unlink)
 
+    # Act
     main.main()
 
+    # Assert
     assert written_files == {
         tmp_path / "logs" / "test.log": LOG_FILE_CONTENT,
         tmp_path / "captures" / "captures.png": CAPTURES_FILE_CONTENT,
     }
-    assert capsys.readouterr().out.splitlines() == [
+    actual = capsys.readouterr().out.splitlines()
+
+    expected = [
         "'le pod est lancé !'",
         '"tentative d\'ecriture dans les volumes montés..."',
         "'écriture terminée !'",
@@ -39,16 +45,21 @@ def test_main_writes_expected_files_and_prints_status(monkeypatch, tmp_path, cap
         "'fichiers de test supprimés !'",
         "'le pod se termine !'",
     ]
+    assert actual == expected
 
 
 def test_main_removes_created_test_files_after_volume_check(monkeypatch, tmp_path):
+
+    # Arrange
     (tmp_path / "logs").mkdir()
     (tmp_path / "captures").mkdir()
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(main, "write_data_with_batch_user", lambda shouldClean: None)
     monkeypatch.setattr(main, "read_books_with_webapp_user", lambda: None)
 
+    # Act
     main.main()
 
+    # Assert
     assert not (tmp_path / "logs" / "test.log").exists()
     assert not (tmp_path / "captures" / "captures.png").exists()

@@ -26,13 +26,29 @@ HTML = """
 
 
 def test_extracts_book_details_from_html():
+
+    # Arrange
     finder = BiblioAventurierBookDetailsFinder(HTML)
 
-    assert finder.isbn("default") == "9782070643027"
+    # Act
+    actual = finder.isbn("default")
+
+    # Assert
+    expected = "9782070643027"
+    assert actual == expected
     assert finder.numero() == 1
-    assert finder.title("default") == "Les Maîtres des Ténèbres"
+    actual = finder.title("default")
+
+    expected = "Les Maîtres des Ténèbres"
+    assert actual == expected
     assert finder.authors() == ["Joe Dever", "Gary Chalk"]
-    assert finder.lastParutionDate("1900-01-01") == "1984-07-15"
-    assert finder.description("default") == "Une aventure épique."
+    actual = finder.lastParutionDate("1900-01-01")
+
+    expected = "1984-07-15"
+    assert actual == expected
+    actual = finder.description("default")
+
+    expected = "Une aventure épique."
+    assert actual == expected
     assert finder.official() is False
     assert finder.is_classic_version() is True

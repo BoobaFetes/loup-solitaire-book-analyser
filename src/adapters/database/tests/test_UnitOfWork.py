@@ -79,6 +79,8 @@ class UnusedBookPriceRepository(IBookPriceRepository):
 
 
 def test_context_manager_starts_and_stops_context():
+
+    # Arrange
     async def scenario():
         context = FakeDbContext()
         unit = UnitOfWork(context, UnusedBookRepository(), UnusedBookPriceRepository())
@@ -86,10 +88,17 @@ def test_context_manager_starts_and_stops_context():
             assert current is unit
         return context.calls
 
-    assert asyncio.run(scenario()) == [("start", None), ("stop", None)]
+    # Act
+    actual = asyncio.run(scenario())
+
+    # Assert
+    expected = [("start", None), ("stop", None)]
+    assert actual == expected
 
 
 def test_transaction_methods_delegate_to_context():
+
+    # Arrange
     async def scenario():
         context = FakeDbContext()
         unit = UnitOfWork(context, UnusedBookRepository(), UnusedBookPriceRepository())
@@ -98,8 +107,13 @@ def test_transaction_methods_delegate_to_context():
         await unit.rollback_transaction()
         return context.calls
 
-    assert asyncio.run(scenario()) == [
+    # Act
+    actual = asyncio.run(scenario())
+
+    # Assert
+    expected = [
         ("begin", None),
         ("commit", None),
         ("rollback", None),
     ]
+    assert actual == expected
