@@ -38,10 +38,7 @@ spec:
               subPath: assets
             - name: project-volume
               mountPath: /app/logs
-              subPath: logs     
-            - name: project-volume
-              mountPath: /app/caches
-              subPath: caches
+              subPath: logs
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

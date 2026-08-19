@@ -12,8 +12,7 @@ $commands = @()
 $dir = "/mnt/lsba"
 $subDirs = (
     "$dir/dev/logs", 
-    "$dir/dev/assets", 
-    "$dir/dev/caches", 
+    "$dir/dev/assets",
     "$dir/dev/postgresql" 
 )
 
@@ -39,8 +38,7 @@ $commands += "getent group | grep lsba"
 $persmissions = @(
     @{ index = 0; owner = "root"; gid = 4001; mode = "2770" },
     @{ index = 1; owner = "root"; gid = 4001; mode = "2770" },
-    @{ index = 2; owner = "root"; gid = 4001; mode = "2770" }
-    @{ index = 3; owner = "root"; gid = 4002; mode = "2770" }
+    @{ index = 2; owner = "root"; gid = 4002; mode = "2770" }
 )
 $chowncmd = ""
 $chmodcmd = ""
