@@ -61,8 +61,7 @@ class InMemoryCacheAdapter(InMemoryCacheInterface):
     def clear(self) -> None:
         """Clear the in-memory cache and delete all persisted files."""
         self.__cache.clear()
-        if self.enabled:
-            self.__fs.clear(self.__cache_dir, "*.cache")
+        self.__fs.clear(self.__cache_dir, "*.cache")
 
     def get(self, key: str) -> CacheStoredValue | None:
         if not self.enabled:
@@ -71,12 +70,7 @@ class InMemoryCacheAdapter(InMemoryCacheInterface):
         internal_key = self.__to_internal_key(key)
         return self.__cache[internal_key] if internal_key in self.__cache else None
 
-    async def set(
-        self,
-        key: str,
-        value: CacheStoredValue,
-        encoding: str | None = None,
-    ) -> None:
+    async def set(self, key: str, value: CacheStoredValue) -> None:
         if not self.enabled:
             return
 
@@ -87,20 +81,13 @@ class InMemoryCacheAdapter(InMemoryCacheInterface):
             await asyncio.to_thread(self.__fs.write_bytes, str(file_path), value)
             return
 
-        await asyncio.to_thread(
-            self.__fs.write_file, str(file_path), value, encoding or "utf-8"
-        )
+        await asyncio.to_thread(self.__fs.write_file, str(file_path), value)
 
-    def set_background(
-        self,
-        key: str,
-        value: CacheStoredValue,
-        encoding: str | None = None,
-    ) -> None:
+    def set_background(self, key: str, value: CacheStoredValue) -> None:
         if not self.enabled:
             return
 
-        task = asyncio.create_task(self.set(key, value, encoding))
+        task = asyncio.create_task(self.set(key, value))
         self.__pending_writes.add(task)
         task.add_done_callback(self.__discard_successful_write)
 

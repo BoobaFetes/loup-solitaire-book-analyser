@@ -176,11 +176,7 @@ class HttpClientAdapter(HttpClientBase[TJsonResponse]):
         result = response.text if not encoding else response.content.decode(encoding)
 
         if self.__cache_enabled:
-            self.__inmemory_cache.set_background(
-                endpoint,
-                result,
-                encoding=encoding if encoding else "utf-8",
-            )
+            self.__inmemory_cache.set_background(endpoint, result)
 
         return result
 

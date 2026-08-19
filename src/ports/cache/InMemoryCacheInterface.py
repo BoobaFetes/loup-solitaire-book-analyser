@@ -38,9 +38,7 @@ class InMemoryCacheInterface(Protocol):
 
         ...
 
-    async def set(
-        self, key: str, value: CacheStoredValue, encoding: str | None = None
-    ) -> None:
+    async def set(self, key: str, value: CacheStoredValue) -> None:
         """Store a value in memory and persist it before returning.
 
         Implementations should avoid blocking the event loop while writing the
@@ -51,15 +49,11 @@ class InMemoryCacheInterface(Protocol):
         Args:
             key: Cache key or file path where the value must be persisted.
             value: Content to cache and write to disk.
-            encoding: File encoding to use. When None, the implementation should
-                use its default text encoding.
         """
 
         ...
 
-    def set_background(
-        self, key: str, value: CacheStoredValue, encoding: str | None = None
-    ) -> None:
+    def set_background(self, key: str, value: CacheStoredValue) -> None:
         """Schedule a cache write without waiting for disk persistence.
 
         This method should update the in-memory value immediately, then start
@@ -70,8 +64,6 @@ class InMemoryCacheInterface(Protocol):
         Args:
             key: Cache key or file path where the value must be persisted.
             value: Content to cache and write to disk.
-            encoding: File encoding to use. When None, the implementation should
-                use its default text encoding.
         """
 
         ...
