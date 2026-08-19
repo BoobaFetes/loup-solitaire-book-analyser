@@ -3,9 +3,8 @@ import logging
 from domain import Book
 from ports.database import IUnitOfWork
 from ports.http import HttpClientBase
-from ports.os import IFileSystem
+from usecases import Assets
 from usecases.book import NonOfficialBookUseCases, OfficialBookUseCases
-from usecases.book.image_assets import write_book_cover_asset
 
 
 class BookListUseCases:
@@ -19,11 +18,11 @@ class BookListUseCases:
         client: HttpClientBase,
         official_book: OfficialBookUseCases,
         non_official_book: NonOfficialBookUseCases,
-        fs: IFileSystem,
+        assets: Assets,
     ):
         self.__unit_of_work = unit_of_work
         self.__client = client
-        self.__fs = fs
+        self.__assets = assets
         self.__logger = logging.getLogger(self.__class__.__name__)
         self.__official_book: OfficialBookUseCases = official_book
         self.__non_official_book: NonOfficialBookUseCases = non_official_book
@@ -53,9 +52,9 @@ class BookListUseCases:
 
     def __write_image_assets(self, books: list[Book]) -> None:
         for book in books:
-            book.image = write_book_cover_asset(
-                self.__fs,
+            book.image = self.__assets.write_image(
                 book.imageSourceUrl,
+                "book-covers",
                 book.imageContent,
             )
             book.imageContent = b""
