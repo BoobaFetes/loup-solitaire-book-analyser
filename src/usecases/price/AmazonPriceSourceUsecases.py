@@ -5,7 +5,6 @@ from typing import cast
 
 from domain import Book, BookPrice
 from ports.browser import BrowserInterface
-from ports.cache import InMemoryCacheInterface
 from ports.usecase import PriceDetailsFinderBase
 from usecases.price.PriceSourceUsecasesBase import PriceSourceUsecasesBase
 
@@ -16,14 +15,12 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
         base_url: str,
         details_factory: Callable[[str], PriceDetailsFinderBase],
         browser: BrowserInterface,
-        inmemory_cache: InMemoryCacheInterface,
         parallel_calls: int = 5,
         request_delay_seconds: float = 1.0,
     ):
         super().__init__(base_url, parallel_calls)
         self.__details_factory = details_factory
         self.__browser = browser
-        self.__inmemory_cache = inmemory_cache
         self.__request_delay_seconds = request_delay_seconds
 
     @staticmethod
@@ -112,7 +109,6 @@ class AmazonPriceSourceUsecases(PriceSourceUsecasesBase):
 
         await asyncio.gather(close_page_action)
 
-        self.__inmemory_cache.set_background(f"amazon_{book.isbn}", html)
         return BookPrice(
             isbn=book.isbn,
             source=self.base_url,

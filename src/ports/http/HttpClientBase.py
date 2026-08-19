@@ -12,9 +12,6 @@ class HttpClientBase(Generic[TJsonResponse], Protocol):
     async def close(self) -> None:
         raise NotImplementedError("close method not implemented")
 
-    def enable_cache(self, enabled: bool = True) -> bool:
-        raise NotImplementedError("enable_cache method not implemented")
-
     # endregion
 
     # region Context manager methods
