@@ -13,6 +13,9 @@ spec:
     spec:
       backoffLimit: 2 # 2 tentatives max en cas d'echec
       template:
+        metadata:
+          labels:
+            lsba-db-postgresql-client: "true"
         spec:
           serviceAccountName: lsba-sa-no-access
           securityContext:

@@ -3,11 +3,12 @@ kind: Job
 metadata:
   name: lsba-find-books-job
   namespace: lsba-ns
-  labels:
-    lsba-db-postgresql-client: "true"
 spec:
   backoffLimit: 2 # 2 tentatives max en cas d'echec
   template:
+    metadata:
+      labels:
+        lsba-db-postgresql-client: "true"
     spec:
       serviceAccountName: lsba-sa-no-access-dev
       securityContext:
