@@ -9,11 +9,12 @@ spec:
   jobTemplate:
     metadata:
       name: lsba-find-books-job
-      labels:
-        lsba-db-postgresql-client: "true"
     spec:
       backoffLimit: 2 # 2 tentatives max en cas d'echec
       template:
+        metadata:
+          labels:
+            lsba-db-postgresql-client: "true"
         spec:
           serviceAccountName: lsba-sa-no-access
           securityContext:
@@ -28,12 +29,15 @@ spec:
               persistentVolumeClaim:
                 claimName: lsba-pvc
           containers:
-            - image: loup-solitaire-book-analyser:v0.1.3
+            - image: loup-solitaire-book-analyser:v0.1.4
               name: lsba-find-books
               args: ["src/find_books.py"]
               envFrom:
                 - configMapRef:
                     name: lsba-cm
+                    optional: false
+                - secretRef:
+                    name: lsba-secrets
                     optional: false
               volumeMounts:       
                 - name: project-volume

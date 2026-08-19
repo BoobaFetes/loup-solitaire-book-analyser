@@ -17,3 +17,4 @@ patches:
   - path: patch-lsba-find-prices-cronjob.yaml
   - path: patch-lsba-sc.yaml
   - path: patch-lsba-pvc.yaml
+  - path: patch-lsba-secrets.yaml

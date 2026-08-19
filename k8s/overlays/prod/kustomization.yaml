@@ -7,10 +7,12 @@ nameSuffix: -prod
 
 resources:
   - ../../base
+  - lsba-secret-postgresql-credentials.yaml
 
 patches:
   - path: patch-lsba-find-books-cronjob.yaml
   - path: patch-lsba-find-prices-cronjob.yaml
   - path: patch-lsba-pvc.yaml
+  - path: patch-lsba-secrets.yaml
         
 
