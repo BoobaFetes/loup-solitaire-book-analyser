@@ -126,7 +126,9 @@ class BookPriceRepository(IBookPriceRepository):
             if _source:
                 statement = statement.where(BookPriceEntity.source == _source)
             if _date:
-                statement = statement.where(BookPriceEntity.date == date.fromisoformat(_date))
+                statement = statement.where(
+                    BookPriceEntity.date == date.fromisoformat(_date)
+                )
 
             with self.__context.operation_session() as session:
                 data = self.__to_entities(list(session.scalars(statement)))

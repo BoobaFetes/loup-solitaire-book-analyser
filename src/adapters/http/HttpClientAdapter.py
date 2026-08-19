@@ -1,23 +1,17 @@
 import asyncio
-import json
 import logging
 from typing import TypeVar, cast
 
 import httpx
 
 from adapters.http.HttpxLogHandler import HttpxLogHandler
-from ports.cache import InMemoryCacheInterface
 from ports.http import HttpClientBase
 
 TJsonResponse = TypeVar("TJsonResponse")
 
 
 class HttpClientAdapter(HttpClientBase[TJsonResponse]):
-    def __init__(
-        self, inmemory_cache: InMemoryCacheInterface, retry_delay: float = 1.0, **kwargs
-    ):
-        self.__inmemory_cache = inmemory_cache
-        self.__cache_enabled = self.__inmemory_cache.is_enabled()
+    def __init__(self, retry_delay: float = 1.0, **kwargs):
         self.__retry_delay = retry_delay
         self.client_options = kwargs
         self.__client: httpx.AsyncClient | None = None
@@ -42,11 +36,6 @@ class HttpClientAdapter(HttpClientBase[TJsonResponse]):
         await self.__client.aclose()
         self.__client = None
         self.__logger.info("HTTP async client closed")
-
-    def enable_cache(self, enabled: bool = True) -> bool:
-        previous_value = self.__cache_enabled
-        self.__cache_enabled = enabled and self.__inmemory_cache.is_enabled()
-        return previous_value
 
     # endregion
 
@@ -142,21 +131,8 @@ class HttpClientAdapter(HttpClientBase[TJsonResponse]):
         retry: int = 3,
         headers: dict[str, str] | None = None,
     ) -> dict[str, TJsonResponse]:
-        if self.__cache_enabled:
-            content = self.__inmemory_cache.get(endpoint)
-            if content:
-                try:
-                    return json.loads(cast(str, content))
-                except json.JSONDecodeError:
-                    self.__logger.warning(
-                        f"Ignoring invalid cached JSON for {endpoint}"
-                    )
-
         response = await self.__get(endpoint, retry, headers=headers)
         result = response.json()
-
-        if self.__cache_enabled:
-            self.__inmemory_cache.set_background(endpoint, json.dumps(result))
 
         return result
 
@@ -167,20 +143,8 @@ class HttpClientAdapter(HttpClientBase[TJsonResponse]):
         retry: int = 3,
         headers: dict[str, str] | None = None,
     ) -> str:
-        if self.__cache_enabled:
-            content = self.__inmemory_cache.get(endpoint)
-            if content:
-                return cast(str, content)
-
         response = await self.__get(endpoint, retry, headers=headers)
         result = response.text if not encoding else response.content.decode(encoding)
-
-        if self.__cache_enabled:
-            self.__inmemory_cache.set_background(
-                endpoint,
-                result,
-                encoding=encoding if encoding else "utf-8",
-            )
 
         return result
 

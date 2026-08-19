@@ -1,7 +1,8 @@
 from ports.http import HttpClientBase
+from tests.fake.SpyStubFake import SpyCall, SpyStubFake
 
 
-class FakeHttpClient(HttpClientBase[object]):
+class FakeHttpClient(HttpClientBase[object], SpyStubFake):
     def __init__(
         self,
         text_by_endpoint: dict[str, str] | None = None,
@@ -10,6 +11,7 @@ class FakeHttpClient(HttpClientBase[object]):
         image_by_endpoint: dict[str, bytes] | None = None,
         default_content: bytes = b"fake-image",
     ) -> None:
+        SpyStubFake.__init__(self)
         self.json_by_endpoint = json_by_endpoint or {}
         self.text_by_endpoint = text_by_endpoint or {}
         self.image_by_endpoint = image_by_endpoint or {}
@@ -20,16 +22,64 @@ class FakeHttpClient(HttpClientBase[object]):
         self.cache_enabled = True
         self.opened = False
 
+    def stub_open(self, returned: None = None) -> None:
+        self._stub("open", returned)
+
+    @property
+    def spy_open(self) -> list[SpyCall]:
+        return self._spy("open")
+
+    def stub_close(self, returned: None = None) -> None:
+        self._stub("close", returned)
+
+    @property
+    def spy_close(self) -> list[SpyCall]:
+        return self._spy("close")
+
+    def stub_get_json(
+        self,
+        returned: dict[str, object],
+        *,
+        endpoint: str | None = None,
+    ) -> None:
+        if endpoint is None:
+            self._stub("get_json", returned)
+        else:
+            self.json_by_endpoint[endpoint] = returned
+
+    @property
+    def spy_get_json(self) -> list[SpyCall]:
+        return self._spy("get_json")
+
+    def stub_get_text(self, returned: str, *, endpoint: str | None = None) -> None:
+        if endpoint is None:
+            self._stub("get_text", returned)
+        else:
+            self.text_by_endpoint[endpoint] = returned
+
+    @property
+    def spy_get_text(self) -> list[SpyCall]:
+        return self._spy("get_text")
+
+    def stub_get_image(self, returned: bytes, *, endpoint: str | None = None) -> None:
+        if endpoint is None:
+            self._stub("get_image", returned)
+        else:
+            self.image_by_endpoint[endpoint] = returned
+
+    @property
+    def spy_get_image(self) -> list[SpyCall]:
+        return self._spy("get_image")
+
     async def open(self, **kwargs) -> None:
         self.opened = True
+        returned = self._returned_or_default("open", None)
+        return self._record_call("open", (), kwargs, returned)
 
     async def close(self) -> None:
         self.opened = False
-
-    def enable_cache(self, enabled: bool = True) -> bool:
-        previous_value = self.cache_enabled
-        self.cache_enabled = enabled
-        return previous_value
+        returned = self._returned_or_default("close", None)
+        return self._record_call("close", (), {}, returned)
 
     async def get_json(
         self,
@@ -38,7 +88,15 @@ class FakeHttpClient(HttpClientBase[object]):
         headers: dict[str, str] | None = None,
     ) -> dict[str, object]:
         self.json_requests.append((endpoint, headers))
-        return self.json_by_endpoint.get(endpoint, {})
+        returned = self._returned_or_default(
+            "get_json", self.json_by_endpoint.get(endpoint, {})
+        )
+        return self._record_call(
+            "get_json",
+            (endpoint,),
+            {"retry": retry, "headers": headers},
+            returned,
+        )
 
     async def get_text(
         self,
@@ -48,7 +106,15 @@ class FakeHttpClient(HttpClientBase[object]):
         headers: dict[str, str] | None = None,
     ) -> str:
         self.text_requests.append((endpoint, headers))
-        return self.text_by_endpoint.get(endpoint, "")
+        returned = self._returned_or_default(
+            "get_text", self.text_by_endpoint.get(endpoint, "")
+        )
+        return self._record_call(
+            "get_text",
+            (endpoint,),
+            {"encoding": encoding, "retry": retry, "headers": headers},
+            returned,
+        )
 
     async def get_image(
         self,
@@ -57,4 +123,12 @@ class FakeHttpClient(HttpClientBase[object]):
         headers: dict[str, str] | None = None,
     ) -> bytes:
         self.image_requests.append(endpoint)
-        return self.image_by_endpoint.get(endpoint, self.default_content)
+        returned = self._returned_or_default(
+            "get_image", self.image_by_endpoint.get(endpoint, self.default_content)
+        )
+        return self._record_call(
+            "get_image",
+            (endpoint,),
+            {"retry": retry, "headers": headers},
+            returned,
+        )

@@ -4,6 +4,8 @@ from adapters.http.HttpxLogHandler import HttpxLogHandler
 
 
 def test_emit_reformats_httpx_access_log_record(caplog):
+
+    # Arrange
     handler = HttpxLogHandler("owner")
     record = logging.LogRecord(
         "httpx",
@@ -15,7 +17,9 @@ def test_emit_reformats_httpx_access_log_record(caplog):
         None,
     )
 
+    # Act
     with caplog.at_level(logging.INFO, logger="owner"):
         handler.emit(record)
 
+    # Assert
     assert "[GET] [200] OK - HTTP/1.1 - https://example.test" in caplog.messages

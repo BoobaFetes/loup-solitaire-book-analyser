@@ -15,21 +15,54 @@ class FileSystemAdapter(IFileSystem):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._path: Path = Path(path)
 
-    def is_file_exists(self, name: str) -> bool:
+    def is_dir_exists(self, path: str) -> bool:
+        """check if directory exists
+
+        Args:
+            path (str): The path of the directory to check.
+
+        Raises:
+            NotImplementedError: If the method is not implemented.
+
+        Returns:
+            bool: True if the directory exists, False otherwise.
+        """
+        return Path(self._path / path).is_dir()
+
+    def is_file_exists(self, path: str) -> bool:
         """Check if a file exists in the file system.
 
         Args:
-            name (str): The name of the file to check.
+            path (str): The path of the file to check.
 
         Returns:
             bool: True if the file exists, False otherwise.
         """
-        return Path(self._path / name).exists()
+        return Path(self._path / path).is_file()
 
-    def clear(self, pattern: str):
+    def get_path(self, path: str) -> Path:
+        """Get the full path of a file or directory.
+
+        Args:
+            path (str): The relative path of the file or directory.
+        Returns:
+            Path: The full path of the file or directory.
+        """
+        return Path(self._path / path).resolve()
+
+    def create(self, path: str) -> None:
+        """Create a directory in the file system.
+
+        Args:
+            path (str): The path of the directory to create.
+        """
+        Path(self._path / path).mkdir(parents=True, exist_ok=True)
+
+    def clear(self, path: str = ".", pattern: str = "*"):
         """Clear files matching the given pattern in the file system.
 
         Args:
+            path (str): The path of the directory to clear files from.
             pattern (str): The glob pattern to match files for deletion.
 
         Raises:
@@ -38,11 +71,12 @@ class FileSystemAdapter(IFileSystem):
         try:
             if pattern == "":
                 raise ValueError("Pattern cannot be empty when clearing directory.")
-            if self._path.is_dir():
-                for file in self._path.glob(pattern):
+            target_dir = self._path / path
+            if target_dir.is_dir():
+                for file in target_dir.glob(pattern):
                     file.unlink()
                 self._logger.info(
-                    f"Cleared files matching '{pattern}' in directory: {self._path}",
+                    f"Cleared files matching '{pattern}' in directory: {target_dir}",
                 )
         except Exception as e:
             self._logger.critical(
@@ -51,22 +85,25 @@ class FileSystemAdapter(IFileSystem):
             )
             raise
 
-    def list(self, pattern: str = "*.html") -> list[str]:
+    def list_files(self, path: str = ".", pattern: str = "*") -> list[Path]:
         """List all files matching the given pattern in the file system.
 
         Args:
+            path (str): The path of the directory to list files from.
             pattern (str): The pattern to match files against.
 
         Returns:
-            list[str]: A list of file names matching the pattern.
+            list[Path]: A list of file names matching the pattern.
         """
-        return [str(file.name) for file in self._path.glob("*.html") if file.is_file()]
+        return [
+            file for file in Path(self._path / path).glob(pattern) if file.is_file()
+        ]
 
-    def read_file(self, name: str) -> str:
+    def read_file(self, path: str, encoding: str = "utf-8") -> str:
         """Read the contents of a file.
 
         Args:
-            name (str): The name of the file to read.
+            path (str): The path of the file to read.
 
 
         Raises:
@@ -77,27 +114,27 @@ class FileSystemAdapter(IFileSystem):
             str: The contents of the file.
         """
         try:
-            with open(Path(self._path / name), "r", encoding="utf-8") as f:
+            with open(Path(self._path / path), "r", encoding=encoding) as f:
                 content = f.read()
             return content
         except FileNotFoundError as e:
             self._logger.critical(
-                f"File not found: {Path(self._path / name)}: {type(e).__name__}: {e}",
+                f"File not found: {Path(self._path / path)}: {type(e).__name__}: {e}",
                 exc_info=True,
             )
             raise
         except IOError as e:
             self._logger.critical(
-                f"Error reading file {Path(self._path / name)}: {type(e).__name__}: {e}",
+                f"Error reading file {Path(self._path / path)}: {type(e).__name__}: {e}",
                 exc_info=True,
             )
             raise
 
-    def read_bytes(self, name: str) -> bytes:
+    def read_bytes(self, path: str) -> bytes:
         """Read the binary contents of a file.
 
         Args:
-            name (str): The name of the file to read.
+            path (str): The path of the file to read.
 
         Raises:
             FileNotFoundError: If the file is not found.
@@ -106,7 +143,7 @@ class FileSystemAdapter(IFileSystem):
         Returns:
             bytes: The binary contents of the file.
         """
-        current_path: Path = Path(self._path / name)
+        current_path: Path = Path(self._path / path)
         try:
             with open(current_path, "rb") as f:
                 return f.read()
@@ -123,11 +160,11 @@ class FileSystemAdapter(IFileSystem):
             )
             raise
 
-    def write_file(self, name: str, content: str, encoding: str = "utf-8") -> None:
+    def write_file(self, path: str, content: str, encoding: str = "utf-8") -> None:
         """Write the contents to a file.
 
         Args:
-            name (str): The name of the file to write.
+            path (str): The path of the file to write.
             content (str): The contents to write to the file.
             encoding (str): The encoding to use when writing the file.
 
@@ -137,7 +174,7 @@ class FileSystemAdapter(IFileSystem):
             IOError: If there is an error writing to the file.
             Exception: If there is any other error during the file writing process.
         """
-        current_path: Path = Path(self._path / name)
+        current_path: Path = Path(self._path / path)
         try:
             # check arguments
             if current_path.suffix == "":
@@ -152,7 +189,7 @@ class FileSystemAdapter(IFileSystem):
                 current_path.unlink()
 
             # action
-            with open(current_path, "w", encoding="utf-8") as f:
+            with open(current_path, "w", encoding=encoding) as f:
                 f.write(content)
         except FileNotFoundError as e:
             self._logger.critical(
@@ -161,11 +198,11 @@ class FileSystemAdapter(IFileSystem):
             )
             raise
 
-    def write_bytes(self, name: str, content: bytes) -> None:
+    def write_bytes(self, path: str, content: bytes) -> None:
         """Write binary contents to a file.
 
         Args:
-            name (str): The name of the file to write.
+            path (str): The path of the file to write.
             content (bytes): The binary contents to write.
 
         Raises:
@@ -174,7 +211,7 @@ class FileSystemAdapter(IFileSystem):
             IOError: If there is an error writing to the file.
             Exception: If there is any other error during the file writing process.
         """
-        current_path: Path = Path(self._path / name)
+        current_path: Path = Path(self._path / path)
         try:
             if current_path.suffix == "":
                 self._logger.error(

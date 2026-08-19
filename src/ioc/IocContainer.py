@@ -7,12 +7,11 @@ from typing import TypeVar, cast
 from dependency_injector import containers, providers
 
 from adapters.browser import BrowserAdapter, PageHandlerAdapter
-from adapters.cache import InMemoryCacheAdapter
 from adapters.database import sqlalchemy
 from adapters.http import HttpClientAdapter
 from adapters.os import FileSystemAdapter
 from adapters.usecase import amazon, biblio_aventurier, gallimard
-from usecases import BookListUseCases, BookPriceUseCases
+from usecases import Assets, BookListUseCases, BookPriceUseCases
 from usecases.book import NonOfficialBookUseCases, OfficialBookUseCases
 from usecases.price import AmazonPriceSourceUsecases, GallimardPriceSourceUsecases
 
@@ -85,13 +84,14 @@ class IocContainer(containers.DeclarativeContainer):
 
     file_system = providers.Singleton(
         FileSystemAdapter,
-        path=providers.Callable(_root_dir_or_current_working_directory, config.root_dir),
+        path=providers.Callable(
+            _root_dir_or_current_working_directory, config.root_dir
+        ),
     )
 
-    inmemory_cache = providers.Singleton(
-        InMemoryCacheAdapter,
+    assets = providers.Singleton(
+        Assets,
         fs=file_system,
-        enabled=config.inmemory_cache_enabled,
     )
 
     # endregion
@@ -126,7 +126,6 @@ class IocContainer(containers.DeclarativeContainer):
 
     http_client = providers.Factory(
         HttpClientAdapter,
-        inmemory_cache=inmemory_cache,
         retry_delay=config.api_timeout,
         headers=providers.Dict(
             {
@@ -177,8 +176,8 @@ class IocContainer(containers.DeclarativeContainer):
     # region book price usecases
     gallimard_price_source_usecases = providers.Singleton(
         GallimardPriceSourceUsecases,
-        base_url=websites["gallimard"],
         client=http_client,
+        base_url=websites["gallimard"],
         details_factory=finders["gallimard"]["price"],
         parallel_calls=config.api_parallel_calls,
     )
@@ -199,7 +198,7 @@ class IocContainer(containers.DeclarativeContainer):
         client=http_client,
         official_book=official_book_usecases,
         non_official_book=non_official_book_usecases,
-        fs=file_system,
+        assets=assets,
     )
 
     book_price_usecases = providers.Singleton(
@@ -273,15 +272,19 @@ def new_ioc_container(script_name: str) -> IocContainer:
     container.config.connection_string_webapp.from_env(
         "CONNECTION_STRING_WEBAPP", required=True
     )
-    container.config.log_level.from_env("LOG_LEVEL", default="INFO")
 
-    convert_env_variables_as(
-        wanted_type=bool,
-        config=container.config.inmemory_cache_enabled,
-        name="INMEMORY_CACHE_ENABLED",
-        default=True,
+    # arrange log file name to include script name for better separation of logs between different scripts
+    container.config.log_level.from_env("LOG_LEVEL", default="INFO")
+    convert_env_variables_as_path(
+        config=container.config.log_file,
+        name="LOG_FILE",
+        required=True,
+        value_fn=lambda path: str(
+            path.parent / f"{path.stem}_{script_name.strip('_')}{path.suffix}"
+        ),
     )
 
+    # arrange browser options
     convert_env_variables_as(
         wanted_type=bool,
         config=container.config.headless,
@@ -313,21 +316,13 @@ def new_ioc_container(script_name: str) -> IocContainer:
         "BROWSER_ACCEPT_LANGUAGE",
         default="fr-FR,fr;q=0.9,en;q=0.8",
     )
+
+    # arrange amazon request delay to avoid being blocked by amazon for too many requests in a short time
     convert_env_variables_as(
         wanted_type=float,
         config=container.config.amazon_request_delay_seconds,
         name="AMAZON_REQUEST_DELAY_SECONDS",
         default=1.0,
-    )
-
-    # arrange log file name to include script name for better separation of logs between different scripts
-    convert_env_variables_as_path(
-        config=container.config.log_file,
-        name="LOG_FILE",
-        required=True,
-        value_fn=lambda path: str(
-            path.parent / f"{path.stem}_{script_name.strip('_')}{path.suffix}"
-        ),
     )
 
     # environment variables are strings by default, force API timeout to numeric

@@ -1,13 +1,10 @@
-from adapters.browser.tests.fake.FakeBrowser import FakeBrowser, FakeBrowserContext
-from adapters.browser.tests.fake.FakeBrowserPage import (
-    FakeBrowserPage,
-    TimeoutBrowserPage,
-)
-from adapters.browser.tests.fake.FakeElement import FakeElement, FakeLocator
-from adapters.browser.tests.fake.FakePageHandler import (
-    FakeHtmlElementAction,
-    FakePageHandler,
-)
+from adapters.browser.tests.fake.FakeBrowser import FakeBrowser
+from adapters.browser.tests.fake.FakeBrowserContext import FakeBrowserContext
+from adapters.browser.tests.fake.FakeBrowserPage import FakeBrowserPage
+from adapters.browser.tests.fake.FakeElement import FakeElement
+from adapters.browser.tests.fake.FakeLocator import FakeLocator
+from adapters.browser.tests.fake.FakeHtmlElementAction import FakeHtmlElementAction
+from adapters.browser.tests.fake.FakePageHandler import FakePageHandler
 
 __all__ = [
     "FakeBrowser",
@@ -17,5 +14,4 @@ __all__ = [
     "FakeHtmlElementAction",
     "FakeLocator",
     "FakePageHandler",
-    "TimeoutBrowserPage",
 ]
