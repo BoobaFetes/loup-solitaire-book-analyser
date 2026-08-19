@@ -1,4 +1,6 @@
-from adapters.usecase.gallimard.GallimardBookDetailsFinder import GallimardBookDetailsFinder
+from adapters.usecase.gallimard.GallimardBookDetailsFinder import (
+    GallimardBookDetailsFinder,
+)
 
 
 HTML = """
@@ -16,28 +18,47 @@ Dever</a><a>Gary Chalk</a></p></div>
 
 
 def test_extracts_book_details_and_price_from_html():
+
+    # Arrange
     finder = GallimardBookDetailsFinder(HTML)
 
-    assert finder.isbn("default") == "9782070643027"
+    # Act
+    actual = finder.isbn("default")
+
+    # Assert
+    expected = "9782070643027"
+    assert actual == expected
     assert finder.numero() == 1
-    assert finder.title("default") == "Les Maîtres des Ténèbres"
+    actual = finder.title("default")
+
+    expected = "Les Maîtres des Ténèbres"
+    assert actual == expected
     assert finder.authors() == ["Joe Dever", "Gary Chalk"]
-    assert finder.description("default") == "Une aventure épique."
+    actual = finder.description("default")
+
+    expected = "Une aventure épique."
+    assert actual == expected
     assert finder.official() is True
 
-    prices = finder.prices(isbn="9782070643027", url="https://gallimard.test/livre")
-    assert len(prices) == 1
-    assert prices[0].source == "Gallimard Jeunesse"
-    assert prices[0].price == 14.9
+    actual = finder.prices(isbn="9782070643027", url="https://gallimard.test/livre")
+
+    expected = 1
+    assert len(actual) == expected
+    assert actual[0].source == "Gallimard Jeunesse"
+    assert actual[0].price == 14.9
 
 
 def test_prices_requires_isbn_and_url():
+
+    # Arrange
     finder = GallimardBookDetailsFinder("")
 
+    # Act
     for kwargs in [{}, {"isbn": "9782070643027"}]:
         try:
             finder.prices(**kwargs)
         except ValueError:
+            # Assert
             pass
         else:
             raise AssertionError("ValueError was not raised")

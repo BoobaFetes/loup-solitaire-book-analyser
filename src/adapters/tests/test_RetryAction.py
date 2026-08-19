@@ -5,6 +5,8 @@ from adapters.RetryAction import RetryAction
 
 
 def test_execute_returns_action_result_without_retry():
+
+    # Arrange
     calls = {"action": 0, "failure": 0}
 
     async def action():
@@ -15,13 +17,20 @@ def test_execute_returns_action_result_without_retry():
         calls["failure"] += 1
         return f"failed: {error}"
 
-    result = asyncio.run(RetryAction[str](getLogger("test")).execute(action, on_failure))
+    # Act
+    actual = asyncio.run(
+        RetryAction[str](getLogger("test")).execute(action, on_failure)
+    )
 
-    assert result == "ok"
+    # Assert
+    expected = "ok"
+    assert actual == expected
     assert calls == {"action": 1, "failure": 0}
 
 
 def test_execute_retries_then_returns_failure_result():
+
+    # Arrange
     attempts = {"count": 0}
 
     async def action():
@@ -31,9 +40,12 @@ def test_execute_retries_then_returns_failure_result():
     async def on_failure(error: Exception):
         return str(error)
 
-    result = asyncio.run(
+    # Act
+    actual = asyncio.run(
         RetryAction[str](getLogger("test")).execute(action, on_failure, retry=2)
     )
 
-    assert result == "boom"
+    # Assert
+    expected = "boom"
+    assert actual == expected
     assert attempts["count"] == 3

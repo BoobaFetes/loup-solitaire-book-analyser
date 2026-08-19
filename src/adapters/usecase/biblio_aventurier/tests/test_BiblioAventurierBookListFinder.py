@@ -4,6 +4,8 @@ from adapters.usecase.biblio_aventurier.BiblioAventurierBookListFinder import (
 
 
 def test_urls_extracts_book_links():
+
+    # Arrange
     html = """
     <body><table><tr><td>
       <table></table>
@@ -14,6 +16,9 @@ def test_urls_extracts_book_links():
     </td></tr></table></body>
     """
 
-    assert BiblioAventurierBookListFinder(html).urls("https://biblio.test/") == [
-        "https://biblio.test/livres/01.html"
-    ]
+    # Act
+    actual = BiblioAventurierBookListFinder(html).urls("https://biblio.test/")
+
+    # Assert
+    expected = ["https://biblio.test/livres/01.html"]
+    assert actual == expected
