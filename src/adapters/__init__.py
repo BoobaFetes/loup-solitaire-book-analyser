@@ -1,8 +1,7 @@
-from adapters import browser, cache, database, http, os, usecase
+from adapters import browser, database, http, os, usecase
 
 __all__ = [
     "browser",
-    "cache",
     "database",
     "http",
     "os",

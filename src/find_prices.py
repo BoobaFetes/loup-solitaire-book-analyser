@@ -34,7 +34,6 @@ async def main():
             logger.info(f"   - {price}")
 
     logger.info("Finished find prices process")
-    await container.inmemory_cache().flush()
 
 
 if __name__ == "__main__":

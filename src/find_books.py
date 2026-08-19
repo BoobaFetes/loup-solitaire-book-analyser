@@ -32,7 +32,6 @@ async def main():
         logger.info(f" - {book}")
 
     logger.info("Finished find books process")
-    await container.inmemory_cache().flush()
 
 
 if __name__ == "__main__":

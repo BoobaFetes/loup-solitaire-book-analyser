@@ -36,13 +36,6 @@ class FakeHttpClient(HttpClientBase[object], SpyStubFake):
     def spy_close(self) -> list[SpyCall]:
         return self._spy("close")
 
-    def stub_enable_cache(self, returned: bool) -> None:
-        self._stub("enable_cache", returned)
-
-    @property
-    def spy_enable_cache(self) -> list[SpyCall]:
-        return self._spy("enable_cache")
-
     def stub_get_json(
         self,
         returned: dict[str, object],
@@ -87,12 +80,6 @@ class FakeHttpClient(HttpClientBase[object], SpyStubFake):
         self.opened = False
         returned = self._returned_or_default("close", None)
         return self._record_call("close", (), {}, returned)
-
-    def enable_cache(self, enabled: bool = True) -> bool:
-        previous_value = self.cache_enabled
-        self.cache_enabled = enabled
-        returned = self._returned_or_default("enable_cache", previous_value)
-        return self._record_call("enable_cache", (enabled,), {}, returned)
 
     async def get_json(
         self,

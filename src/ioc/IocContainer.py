@@ -7,7 +7,6 @@ from typing import TypeVar, cast
 from dependency_injector import containers, providers
 
 from adapters.browser import BrowserAdapter, PageHandlerAdapter
-from adapters.cache import InMemoryCacheAdapter
 from adapters.database import sqlalchemy
 from adapters.http import HttpClientAdapter
 from adapters.os import FileSystemAdapter
@@ -90,13 +89,6 @@ class IocContainer(containers.DeclarativeContainer):
         ),
     )
 
-    inmemory_cache = providers.Singleton(
-        InMemoryCacheAdapter,
-        fs=file_system,
-        cache_dir=config.inmemory_cache_dir,
-        enabled=config.inmemory_cache_enabled,
-    )
-
     assets = providers.Singleton(
         Assets,
         fs=file_system,
@@ -134,7 +126,6 @@ class IocContainer(containers.DeclarativeContainer):
 
     http_client = providers.Factory(
         HttpClientAdapter,
-        inmemory_cache=inmemory_cache,
         retry_delay=config.api_timeout,
         headers=providers.Dict(
             {
@@ -185,8 +176,8 @@ class IocContainer(containers.DeclarativeContainer):
     # region book price usecases
     gallimard_price_source_usecases = providers.Singleton(
         GallimardPriceSourceUsecases,
-        base_url=websites["gallimard"],
         client=http_client,
+        base_url=websites["gallimard"],
         details_factory=finders["gallimard"]["price"],
         parallel_calls=config.api_parallel_calls,
     )
@@ -291,15 +282,6 @@ def new_ioc_container(script_name: str) -> IocContainer:
         value_fn=lambda path: str(
             path.parent / f"{path.stem}_{script_name.strip('_')}{path.suffix}"
         ),
-    )
-
-    # arrange inmemory cache options
-    container.config.inmemory_cache_dir.from_env("INMEMORY_CACHE_DIR", default="caches")
-    convert_env_variables_as(
-        wanted_type=bool,
-        config=container.config.inmemory_cache_enabled,
-        name="INMEMORY_CACHE_ENABLED",
-        default=True,
     )
 
     # arrange browser options

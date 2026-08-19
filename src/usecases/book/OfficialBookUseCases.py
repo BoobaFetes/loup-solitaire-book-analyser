@@ -103,23 +103,19 @@ class OfficialBookUseCases:
         Gallimard rejects direct calls to /catalogue/fragment when the request
         does not have the cookies created by a previous catalogue page load.
         """
-        previous_cache_state = client.enable_cache(False)
-        try:
-            await client.get_text(
-                referer,
-                headers={
-                    "Accept": (
-                        "text/html,application/xhtml+xml,application/xml;q=0.9,"
-                        "image/avif,image/webp,*/*;q=0.8"
-                    ),
-                    "Sec-Fetch-Dest": "document",
-                    "Sec-Fetch-Mode": "navigate",
-                    "Sec-Fetch-Site": "none",
-                    "Sec-Fetch-User": "?1",
-                },
-            )
-        finally:
-            client.enable_cache(previous_cache_state)
+        await client.get_text(
+            referer,
+            headers={
+                "Accept": (
+                    "text/html,application/xhtml+xml,application/xml;q=0.9,"
+                    "image/avif,image/webp,*/*;q=0.8"
+                ),
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Sec-Fetch-User": "?1",
+            },
+        )
 
     def __get_catalogue_referer(self, fragment_url: str) -> str:
         """Build the catalogue page URL matching a Gallimard fragment URL."""

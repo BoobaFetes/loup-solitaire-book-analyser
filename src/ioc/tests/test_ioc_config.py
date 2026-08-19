@@ -139,8 +139,6 @@ def test_new_ioc_container_loads_environment_configuration(monkeypatch, tmp_path
     monkeypatch.setenv("CONNECTION_STRING_BATCH", "sqlite+pysqlite:///:memory:")
     monkeypatch.setenv("CONNECTION_STRING_WEBAPP", "sqlite+pysqlite:///:memory:")
     monkeypatch.setenv("LOG_FILE", str(tmp_path / "app.log"))
-    monkeypatch.setenv("CACHE_DIR", "caches")
-    monkeypatch.setenv("INMEMORY_CACHE_ENABLED", "false")
     monkeypatch.setenv("HEADLESS", "true")
     monkeypatch.setenv("BROWSER_USER_AGENT", "agent")
     monkeypatch.setenv("BROWSER_VIEWPORT_WIDTH", "800")
@@ -159,7 +157,6 @@ def test_new_ioc_container_loads_environment_configuration(monkeypatch, tmp_path
         # Assert
         assert container.config.root_dir() == str(tmp_path)
         assert container.config.log_file() == str(tmp_path / "app_find_books.log")
-        assert container.config.inmemory_cache_enabled() is False
         assert container.config.headless() is True
         assert container.config.browser_viewport_width() == 800
         assert container.config.browser_viewport_height() == 600
