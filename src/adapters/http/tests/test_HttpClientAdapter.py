@@ -3,12 +3,8 @@ import asyncio
 import httpx
 import pytest
 
-from adapters.cache import InMemoryCacheAdapter
 from adapters.cache.tests.fake import FakeInMemoryCache
 from adapters.http.HttpClientAdapter import HttpClientAdapter
-from adapters.os.FileSystemAdapter import FileSystemAdapter
-
-CACHE_DIR = "caches"
 
 
 def test_get_json_text_and_image_use_configured_async_client(tmp_path):
@@ -23,9 +19,7 @@ def test_get_json_text_and_image_use_configured_async_client(tmp_path):
             return httpx.Response(200, content=b"image")
 
         client = HttpClientAdapter(
-            inmemory_cache=InMemoryCacheAdapter(
-                FileSystemAdapter(str(tmp_path)), CACHE_DIR
-            ),
+            inmemory_cache=FakeInMemoryCache(enabled=False),
             transport=httpx.MockTransport(handler),
             base_url="https://example.test",
         )
@@ -56,9 +50,7 @@ def test_get_text_decodes_with_requested_encoding(tmp_path):
     async def scenario():
         response = httpx.Response(200, content="épreuve".encode("cp1252"))
         client = HttpClientAdapter(
-            inmemory_cache=InMemoryCacheAdapter(
-                FileSystemAdapter(str(tmp_path)), CACHE_DIR
-            ),
+            inmemory_cache=FakeInMemoryCache(enabled=False),
             transport=httpx.MockTransport(lambda request: response),
             base_url="https://example.test",
         )
@@ -80,9 +72,7 @@ def test_get_raises_when_client_is_not_open(tmp_path):
     # Arrange
     async def scenario():
         client = HttpClientAdapter(
-            inmemory_cache=InMemoryCacheAdapter(
-                FileSystemAdapter(str(tmp_path)), CACHE_DIR
-            ),
+            inmemory_cache=FakeInMemoryCache(enabled=False),
         )
         try:
             await client.get_text("https://example.test")

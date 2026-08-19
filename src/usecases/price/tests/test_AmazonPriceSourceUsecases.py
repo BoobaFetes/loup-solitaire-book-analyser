@@ -2,8 +2,7 @@ import asyncio
 from pathlib import Path
 
 from adapters.browser.tests.fake import FakeBrowser, FakePageHandler
-from adapters.cache.InMemoryCacheAdapter import InMemoryCacheAdapter
-from adapters.os.FileSystemAdapter import FileSystemAdapter
+from adapters.cache.tests.fake import FakeInMemoryCache
 from adapters.usecase.amazon.AmazonPriceDetailsFinder import AmazonPriceDetailsFinder
 from domain import Book
 from usecases.price.AmazonPriceSourceUsecases import AmazonPriceSourceUsecases
@@ -40,9 +39,7 @@ def test_fetch_bookprice_returns_amazon_price_from_dataset(tmp_path):
         BASE_URL,
         AmazonPriceDetailsFinder,
         FakeBrowser(page),
-        inmemory_cache=InMemoryCacheAdapter(
-            FileSystemAdapter(str(tmp_path)), CACHE_DIR
-        ),
+        inmemory_cache=FakeInMemoryCache(enabled=False),
         request_delay_seconds=0,
     )
 
@@ -77,9 +74,7 @@ def test_fetch_bookprice_matches_agarash_title_with_apostrophe_variant(tmp_path)
         BASE_URL,
         AmazonPriceDetailsFinder,
         FakeBrowser(page),
-        inmemory_cache=InMemoryCacheAdapter(
-            FileSystemAdapter(str(tmp_path)), CACHE_DIR
-        ),
+        inmemory_cache=FakeInMemoryCache(enabled=False),
         request_delay_seconds=0,
     )
 
@@ -112,9 +107,7 @@ def test_fetch_bookprice_returns_not_set_price_for_gallimard_missing_book_withou
         BASE_URL,
         AmazonPriceDetailsFinder,
         FakeBrowser(page),
-        inmemory_cache=InMemoryCacheAdapter(
-            FileSystemAdapter(str(tmp_path)), CACHE_DIR
-        ),
+        inmemory_cache=FakeInMemoryCache(enabled=False),
         request_delay_seconds=0,
     )
 
@@ -150,9 +143,7 @@ def test_fetch_bookprice_returns_none_when_amazon_result_is_not_visible(tmp_path
         BASE_URL,
         AmazonPriceDetailsFinder,
         FakeBrowser(page),
-        inmemory_cache=InMemoryCacheAdapter(
-            FileSystemAdapter(str(tmp_path)), CACHE_DIR
-        ),
+        inmemory_cache=FakeInMemoryCache(enabled=False),
         request_delay_seconds=0,
     )
 
@@ -180,9 +171,7 @@ def test_fetch_bookprices_uses_browser_context_and_returns_found_prices(tmp_path
         BASE_URL,
         AmazonPriceDetailsFinder,
         browser,
-        inmemory_cache=InMemoryCacheAdapter(
-            FileSystemAdapter(str(tmp_path)), CACHE_DIR
-        ),
+        inmemory_cache=FakeInMemoryCache(enabled=False),
         request_delay_seconds=0,
     )
 
@@ -208,9 +197,7 @@ def test_fetch_bookprice_rejects_missing_browser_parameters(tmp_path):
         BASE_URL,
         AmazonPriceDetailsFinder,
         FakeBrowser(),
-        inmemory_cache=InMemoryCacheAdapter(
-            FileSystemAdapter(str(tmp_path)), CACHE_DIR
-        ),
+        inmemory_cache=FakeInMemoryCache(enabled=False),
         request_delay_seconds=0,
     )
 

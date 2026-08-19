@@ -105,7 +105,6 @@ def test_convert_env_variables_as_path_rewrites_env_path(monkeypatch, tmp_path):
 
 
 def test_http_client_headers_resolve_configuration_options(tmp_path):
-
     # Arrange
     container = IocContainer()
     container.config.root_dir.from_value(str(tmp_path))
