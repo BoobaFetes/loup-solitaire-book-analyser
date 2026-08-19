@@ -99,7 +99,7 @@ class FileSystemAdapter(IFileSystem):
             file for file in Path(self._path / path).glob(pattern) if file.is_file()
         ]
 
-    def read_file(self, path: str) -> str:
+    def read_file(self, path: str, encoding: str = "utf-8") -> str:
         """Read the contents of a file.
 
         Args:
@@ -114,7 +114,7 @@ class FileSystemAdapter(IFileSystem):
             str: The contents of the file.
         """
         try:
-            with open(Path(self._path / path), "r", encoding="utf-8") as f:
+            with open(Path(self._path / path), "r", encoding=encoding) as f:
                 content = f.read()
             return content
         except FileNotFoundError as e:
