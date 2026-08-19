@@ -3,8 +3,6 @@ kind: Job
 metadata:
   name: lsba-find-prices-job
   namespace: lsba-ns
-  labels:
-    lsba-db-postgresql-client: "true"
 spec:
   backoffLimit: 2 # 2 tentatives max en cas d'echec
   template:

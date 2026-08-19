@@ -8,8 +8,6 @@ spec:
   jobTemplate:
     metadata:
       name: lsba-find-prices-job
-      labels:
-        lsba-db-postgresql-client: "true"
     spec:
       backoffLimit: 2 # 2 tentatives max en cas d'echec
       template:
